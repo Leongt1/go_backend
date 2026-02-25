@@ -17,6 +17,32 @@ const (
 	GenderFemale GenderType = "Female"
 )
 
+func ParseRole(s string) (RoleType, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", ErrInvalidRole
+	}
+	normalized := RoleType(strings.ToUpper(s[:1]) + strings.ToLower(s[1:]))
+	switch normalized {
+	case RoleUser, RoleAdmin:
+		return normalized, nil
+	}
+	return "", ErrInvalidRole
+}
+
+func ParseGender(s string) (GenderType, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", ErrInvalidGender
+	}
+	normalized := GenderType(strings.ToUpper(s[:1]) + strings.ToLower(s[1:]))
+	switch normalized {
+	case GenderMale, GenderFemale:
+		return normalized, nil
+	}
+	return "", ErrInvalidGender
+}
+
 type User struct {
 	ID           uuid.UUID
 	Name         string

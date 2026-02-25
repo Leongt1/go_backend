@@ -3,6 +3,7 @@ package middleware
 import (
 	platformErrors "backend-go/internal/platform/errors"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,9 @@ func ErrorHandler() gin.HandlerFunc {
 		}
 
 		err := c.Errors.Last().Err
+
+		// Log the real error for debugging
+		log.Printf("[ERROR] %s %s → %v", c.Request.Method, c.Request.URL.Path, err)
 
 		// domain errors
 		var domainErr *platformErrors.DomainError
@@ -43,6 +47,11 @@ func ErrorHandler() gin.HandlerFunc {
 		// platform errors
 		var appErr *platformErrors.AppError
 		if errors.As(err, &appErr) {
+			if appErr.Err != nil {
+				log.Printf("[APP ERROR] %s %s → [%s] %s: %v", c.Request.Method, c.Request.URL.Path, appErr.Code, appErr.Message, appErr.Err)
+			} else {
+				log.Printf("[APP ERROR] %s %s → [%s] %s", c.Request.Method, c.Request.URL.Path, appErr.Code, appErr.Message)
+			}
 			switch appErr.Code {
 			case platformErrors.CodeDatabaseError, platformErrors.CodeInternalServer:
 				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
@@ -53,6 +62,7 @@ func ErrorHandler() gin.HandlerFunc {
 		}
 
 		// Fallback for unexpected errors
+		log.Printf("[UNEXPECTED ERROR] %s %s → %v", c.Request.Method, c.Request.URL.Path, err)
 		c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 	}
 }

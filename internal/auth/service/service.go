@@ -3,6 +3,7 @@ package service
 import (
 	"backend-go/internal/auth/domain"
 	"backend-go/internal/platform/security"
+	userDomain "backend-go/internal/users/domain"
 	"backend-go/internal/users/service"
 	"context"
 	"strings"
@@ -168,12 +169,47 @@ func (s *Service) Logout(ctx context.Context, refreshTokenStr string) error {
 }
 
 type SignupInput struct {
-	Email    string
-	Password string
-	Role     string
-	Gender   string
+	Name        string
+	Email       string
+	Password    string
+	Role        string
+	Gender      string
+	DateOfBirth *time.Time
 }
 
-func (s *Service) Signup(ctx context.Context, req *SignupInput) (string, error) {
-	return "", nil
+func (s *Service) Signup(ctx context.Context, req *SignupInput) error {
+	name := strings.TrimSpace(req.Name)
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	password := req.Password
+
+	if name == "" || email == "" || password == "" {
+		return domain.ErrInvalidInput
+	}
+
+	role, err := userDomain.ParseRole(req.Role)
+	if err != nil {
+		return err
+	}
+
+	gender, err := userDomain.ParseGender(req.Gender)
+	if err != nil {
+
+		return err
+	}
+
+	createUser := &service.CreateInput{
+		Name:        name,
+		Email:       email,
+		Password:    password,
+		Role:        role,
+		Gender:      gender,
+		DateOfBirth: req.DateOfBirth,
+	}
+
+	err = s.users.CreateUser(ctx, createUser)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

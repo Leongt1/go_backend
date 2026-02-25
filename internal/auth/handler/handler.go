@@ -3,6 +3,7 @@ package handler
 import (
 	"backend-go/internal/auth/domain"
 	"backend-go/internal/auth/service"
+	"log"
 	"net/http"
 	"time"
 
@@ -111,5 +112,41 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",
+	})
+}
+
+type SignupRequest struct {
+	Name        string     `json:"name" binding:"required"`
+	Email       string     `json:"email" binding:"required"`
+	Password    string     `json:"password" binding:"required"`
+	Role        string     `json:"role" binding:"required"`
+	Gender      string     `json:"gender" binding:"required"`
+	DateOfBirth *time.Time `json:"date_of_birth"`
+}
+
+func (h *AuthHandler) Signup(c *gin.Context) {
+	var req SignupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
+	log.Printf("[DEBUG] signup request: %+v", req)
+
+	err := h.service.Signup(c.Request.Context(), &service.SignupInput{
+		Name:        req.Name,
+		Email:       req.Email,
+		Password:    req.Password,
+		Role:        req.Role,
+		Gender:      req.Gender,
+		DateOfBirth: req.DateOfBirth,
+	})
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Signup successful",
 	})
 }
