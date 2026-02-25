@@ -28,58 +28,54 @@ type CreateInput struct {
 	DateOfBirth *time.Time
 }
 
-func (s *Service) CreateUser(ctx context.Context, req *CreateInput) (*domain.User, error) {
+func (s *Service) CreateUser(ctx context.Context, req *CreateInput) error {
 	// Validation
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		return nil, domain.ErrInvalidInput
+		return domain.ErrInvalidInput
 	}
 
 	email := strings.ToLower(strings.TrimSpace(req.Email)) // Normalize email
 	if email == "" {
-		return nil, domain.ErrInvalidInput
+		return domain.ErrInvalidInput
 	}
+
 	_, err := s.repo.GetByEmail(ctx, email)
 	if err == nil {
-		return nil, domain.ErrEmailAlreadyExists
+		return domain.ErrEmailAlreadyExists
 	}
 
 	password := req.Password
 	if password == "" {
-		return nil, domain.ErrInvalidInput
+		return domain.ErrInvalidInput
 	}
 
-	role := domain.RoleType(strings.ToTitle(strings.ToLower(strings.TrimSpace(string(req.Role)))))
-	if role == "" {
-		role = domain.RoleUser
-	} else if role != domain.RoleAdmin && role != domain.RoleUser {
-		return nil, domain.ErrInvalidRole
+	// trust the caller to pass valid role/gender — already validated via ParseRole/ParseGender
+	if req.Role != domain.RoleUser && req.Role != domain.RoleAdmin {
+		return domain.ErrInvalidRole
 	}
 
-	gender := domain.GenderType(strings.ToTitle(strings.ToLower(strings.TrimSpace(string(req.Gender)))))
-	if gender == "" {
-		return nil, domain.ErrInvalidInput
-	} else if gender != domain.GenderMale && gender != domain.GenderFemale {
-		return nil, domain.ErrInvalidGender
+	if req.Gender != domain.GenderMale && req.Gender != domain.GenderFemale {
+		return domain.ErrInvalidGender
 	}
 
 	dateOfBirth := req.DateOfBirth
 	if dateOfBirth != nil {
 		if dateOfBirth.After(time.Now().UTC()) {
-			return nil, domain.ErrInvalidInput
+			return domain.ErrInvalidInput
 		}
 	}
 
 	// Generating password hash
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, platformErrors.ErrHashPassword
+		return platformErrors.ErrHashPassword
 	}
 
 	// Creating user
-	user, err := domain.NewUser(name, email, role, gender)
+	user, err := domain.NewUser(name, email, req.Role, req.Gender)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	user.PasswordHash = string(hash)
 	user.DateOfBirth = dateOfBirth
@@ -87,9 +83,9 @@ func (s *Service) CreateUser(ctx context.Context, req *CreateInput) (*domain.Use
 	// Saving user to db
 	err = s.repo.Create(ctx, user)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return user, nil
+	return nil
 }
 
 func (s *Service) AuthenticateUser(ctx context.Context, emailRaw string, passwordRaw string) (*domain.User, error) {
