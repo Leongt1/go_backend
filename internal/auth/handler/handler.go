@@ -3,7 +3,6 @@ package handler
 import (
 	"backend-go/internal/auth/domain"
 	"backend-go/internal/auth/service"
-	"log"
 	"net/http"
 	"time"
 
@@ -130,8 +129,6 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		c.Error(domain.ErrInvalidInput)
 		return
 	}
-
-	log.Printf("[DEBUG] signup request: %+v", req)
 
 	err := h.service.Signup(c.Request.Context(), &service.SignupInput{
 		Name:        req.Name,
