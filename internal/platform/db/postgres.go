@@ -20,7 +20,7 @@ func NewPostgresPool(ctx context.Context, dbCfg config.DatabaseConfig) (*pgxpool
 		return nil, fmt.Errorf("missing required database environment variables (DB_USER, DB_HOST, DB_NAME)")
 	}
 
-	dns := fmt.Sprintf(
+	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		user,
 		password,
@@ -29,7 +29,7 @@ func NewPostgresPool(ctx context.Context, dbCfg config.DatabaseConfig) (*pgxpool
 		dbName,
 	)
 
-	cfg, err := pgxpool.ParseConfig(dns)
+	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, err
 	}

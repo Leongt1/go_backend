@@ -111,22 +111,38 @@ func (s *Service) AuthenticateUser(ctx context.Context, emailRaw string, passwor
 
 type UpdateInput struct {
 	Name        *string
-	Role        *domain.RoleType
-	Gender      *domain.GenderType
+	Role        *string
+	Gender      *string
 	DateOfBirth *time.Time
 	UpdatedBy   *uuid.UUID
 }
 
 func (s *Service) UpdateUser(ctx context.Context, id uuid.UUID, req *UpdateInput) (*domain.User, error) {
-
 	// check if user exists
 	existingUser, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
+	var parsedRole *domain.RoleType
+	if req.Role != nil {
+		role, err := domain.ParseRole(*req.Role)
+		if err != nil {
+			return nil, err
+		}
+		parsedRole = &role
+	}
+	var parsedGender *domain.GenderType
+	if req.Gender != nil {
+		gender, err := domain.ParseGender(*req.Gender)
+		if err != nil {
+			return nil, err
+		}
+		parsedGender = &gender
+	}
+
 	// Updating user using domain method
-	err = existingUser.Update(req.Name, req.Role, req.Gender, req.DateOfBirth, req.UpdatedBy)
+	err = existingUser.Update(req.Name, parsedRole, parsedGender, req.DateOfBirth, req.UpdatedBy)
 	if err != nil {
 		return nil, err
 	}
