@@ -35,9 +35,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "invalid credentials",
-		})
+		c.Error(err)
 		return
 	}
 

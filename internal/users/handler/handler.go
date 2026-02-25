@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"backend-go/internal/users/domain"
 	"backend-go/internal/users/service"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -21,15 +23,19 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	c.JSON(200, users)
+	c.JSON(http.StatusOK, users)
 }
 
 func (h *UserHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
-	user, err := h.service.GetByID(c.Request.Context(), uuid.Must(uuid.Parse(id)))
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+	user, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		c.Error(err)
 		return
 	}
-	c.JSON(200, user)
+	c.JSON(http.StatusOK, user)
 }
