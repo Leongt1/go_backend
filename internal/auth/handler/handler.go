@@ -109,5 +109,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		true,  // HttpOnly
 	)
 
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logged out successfully",
+	})
 }
