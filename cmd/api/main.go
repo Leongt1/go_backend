@@ -74,7 +74,7 @@ func main() {
 
 	api := router.Group("/api/v1")
 	// Initialize routes
-	users.RegisterRoutes(api, userHandler)
+	users.RegisterRoutes(api, userHandler, jwtManager)
 	auth.RegisterRoutes(api, authHandler)
 
 	// Seed admin user
