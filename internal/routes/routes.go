@@ -11,6 +11,7 @@ func NewRouter() *gin.Engine {
 	r := gin.Default()
 
 	r.Use(middleware.CORS())
+	r.Use(middleware.ErrorHandler())
 
 	return r
 }

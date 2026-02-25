@@ -19,43 +19,44 @@ func ErrorHandler() gin.HandlerFunc {
 		err := c.Errors.Last().Err
 
 		// domain errors
-		var dbErr *platformErrors.DomainError
-		if errors.As(err, &dbErr) {
-			switch dbErr.Code {
-			case "INVALID_INPUT":
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": dbErr.Message,
-				})
-			case "INVALID_CREDENTIALS":
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error": dbErr.Message,
-				})
+		var domainErr *platformErrors.DomainError
+		if errors.As(err, &domainErr) {
+			switch domainErr.Code {
+			case platformErrors.CodeInvalidInput:
+				c.JSON(http.StatusBadRequest, errorResponse(domainErr.Message))
+			case platformErrors.CodeInvalidCredentials:
+				c.JSON(http.StatusUnauthorized, errorResponse(domainErr.Message))
+			case platformErrors.CodeUserNotFound:
+				c.JSON(http.StatusNotFound, errorResponse(domainErr.Message))
+			case platformErrors.CodeEmailAlreadyExists:
+				c.JSON(http.StatusConflict, errorResponse(domainErr.Message))
+			case platformErrors.CodeInvalidRole, platformErrors.CodeInvalidGender:
+				c.JSON(http.StatusBadRequest, errorResponse(domainErr.Message))
+			case platformErrors.CodeForbidden:
+				c.JSON(http.StatusForbidden, errorResponse(domainErr.Message))
 			default:
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": dbErr.Message,
-				})
+				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 			}
 			return
 		}
 
 		// platform errors
-		var pErr *platformErrors.AppError
-		if errors.As(err, &pErr) {
-			switch pErr.Code {
-			case "INTERNAL_SERVER_ERROR":
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": pErr.Message,
-				})
-			case "DATABASE_ERROR":
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": pErr.Message,
-				})
+		var appErr *platformErrors.AppError
+		if errors.As(err, &appErr) {
+			switch appErr.Code {
+			case platformErrors.CodeDatabaseError, platformErrors.CodeInternalServer:
+				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 			default:
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": pErr.Message,
-				})
+				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 			}
 			return
 		}
+
+		// Fallback for unexpected errors
+		c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 	}
+}
+
+func errorResponse(msg string) gin.H {
+	return gin.H{"error": msg}
 }
