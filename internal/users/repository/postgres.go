@@ -159,7 +159,7 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *Repository) List(ctx context.Context) ([]domain.User, error) {
 	query := `
-		SELECT id, name, email, password_hash, role, gender, date_of_birth, created_at, updated_at, created_by, updated_by
+		SELECT id, name, email, role, gender, date_of_birth, created_at, updated_at, created_by, updated_by
 		FROM users
 	`
 	rows, err := r.db.Query(ctx, query)
@@ -179,7 +179,6 @@ func (r *Repository) List(ctx context.Context) ([]domain.User, error) {
 			&user.ID,
 			&user.Name,
 			&user.Email,
-			&user.PasswordHash,
 			&user.Role,
 			&user.Gender,
 			&user.DateOfBirth,

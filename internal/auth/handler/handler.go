@@ -92,11 +92,11 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	// revoke the refresh token
-	err = h.service.Logout(c.Request.Context(), refreshTokenStr)
-	if err != nil {
-		c.Error(err)
-		return
-	}
+	_ = h.service.Logout(c.Request.Context(), refreshTokenStr)
+	// if err != nil {
+	// 	c.Error(err)
+	// 	return
+	// }
 
 	// clear the refresh token cookie
 	c.SetCookie(

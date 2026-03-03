@@ -3,6 +3,7 @@ package users
 import (
 	"backend-go/internal/platform/middleware"
 	"backend-go/internal/platform/security"
+	"backend-go/internal/users/domain"
 	"backend-go/internal/users/handler"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +15,7 @@ func RegisterRoutes(r *gin.RouterGroup, userHandler *handler.UserHandler, jwtMan
 	{
 		userGroup.GET("/", userHandler.ListUsers)
 		userGroup.GET("/:id", userHandler.GetByID)
-		userGroup.PATCH("/:id", userHandler.Update)
-		userGroup.DELETE("/:id", userHandler.Delete)
+		userGroup.PATCH("/:id", middleware.RequireRole(domain.RoleAdmin), userHandler.Update)
+		userGroup.DELETE("/:id", middleware.RequireRole(domain.RoleAdmin), userHandler.Delete)
 	}
 }

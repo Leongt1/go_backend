@@ -28,7 +28,7 @@ func CORS() gin.HandlerFunc {
 		ExposeHeaders: []string{
 			"Content-Length",
 		},
-		AllowCredentials: true, // 🔥 REQUIRED FOR COOKIES
+		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	})
 }
