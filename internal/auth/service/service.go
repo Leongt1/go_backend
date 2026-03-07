@@ -38,13 +38,13 @@ type LoginInput struct {
 	Password string
 }
 
-type LoginResponse struct {
+type LoginOutput struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"`
 }
 
-func (s *Service) Login(ctx context.Context, req *LoginInput) (*LoginResponse, error) {
+func (s *Service) Login(ctx context.Context, req *LoginInput) (*LoginOutput, error) {
 	// validation
 	if req == nil {
 		return nil, domain.ErrInvalidInput
@@ -87,7 +87,7 @@ func (s *Service) Login(ctx context.Context, req *LoginInput) (*LoginResponse, e
 		return nil, err
 	}
 
-	return &LoginResponse{
+	return &LoginOutput{
 		AccessToken:  accessToken,
 		RefreshToken: refreshTokenStr,
 		ExpiresIn:    int64(s.accessTTL.Seconds()),
@@ -95,7 +95,7 @@ func (s *Service) Login(ctx context.Context, req *LoginInput) (*LoginResponse, e
 
 }
 
-func (s *Service) Refresh(ctx context.Context, refreshTokenStr string) (*LoginResponse, error) {
+func (s *Service) Refresh(ctx context.Context, refreshTokenStr string) (*LoginOutput, error) {
 	// fetch from DB
 	token, err := s.refreshRepo.GetByToken(ctx, refreshTokenStr)
 	if err != nil {
@@ -148,7 +148,7 @@ func (s *Service) Refresh(ctx context.Context, refreshTokenStr string) (*LoginRe
 		return nil, err
 	}
 
-	return &LoginResponse{
+	return &LoginOutput{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshStr,
 		ExpiresIn:    int64(s.accessTTL.Seconds()),
