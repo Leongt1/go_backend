@@ -44,19 +44,19 @@ func ParseGender(s string) (GenderType, error) {
 }
 
 type User struct {
-	ID           uuid.UUID
-	Name         string
-	Email        string
-	PasswordHash string
-	Role         RoleType
-	Gender       GenderType
-	DateOfBirth  *time.Time
+	ID           uuid.UUID  `json:"id"`
+	Name         string     `json:"name"`
+	Email        string     `json:"email"`
+	PasswordHash string     `json:"-"`
+	Role         RoleType   `json:"role"`
+	Gender       GenderType `json:"gender"`
+	DateOfBirth  *time.Time `json:"date_of_birth"`
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
-	CreatedBy *uuid.UUID
-	UpdatedBy *uuid.UUID
+	CreatedBy *uuid.UUID `json:"created_by"`
+	UpdatedBy *uuid.UUID `json:"updated_by"`
 }
 
 func NewUser(name, email string, role RoleType, gender GenderType) (*User, error) {

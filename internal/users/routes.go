@@ -9,13 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.RouterGroup, userHandler *handler.UserHandler, jwtManager *security.JWTManager) {
+func RegisterRoutes(r *gin.RouterGroup, h *handler.UserHandler, jwtManager *security.JWTManager) {
 	userGroup := r.Group("/users")
 	userGroup.Use(middleware.AuthMiddleware(jwtManager))
 	{
-		userGroup.GET("/", userHandler.ListUsers)
-		userGroup.GET("/:id", userHandler.GetByID)
-		userGroup.PATCH("/:id", middleware.RequireRole(domain.RoleAdmin), userHandler.Update)
-		userGroup.DELETE("/:id", middleware.RequireRole(domain.RoleAdmin), userHandler.Delete)
+		userGroup.GET("/", h.ListUsers)
+		userGroup.GET("/:id", h.GetByID)
+		userGroup.PATCH("/:id", middleware.RequireRole(domain.RoleAdmin), h.Update)
+		userGroup.DELETE("/:id", middleware.RequireRole(domain.RoleAdmin), h.Delete)
 	}
 }

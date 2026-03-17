@@ -38,6 +38,12 @@ func ErrorHandler() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, errorResponse(domainErr.Message))
 			case platformErrors.CodeForbidden:
 				c.JSON(http.StatusForbidden, errorResponse(domainErr.Message))
+			case platformErrors.CodeCategoryNotFound:
+				c.JSON(http.StatusNotFound, errorResponse(domainErr.Message))
+			case platformErrors.CodeCategoryHidden:
+				c.JSON(http.StatusGone, errorResponse(domainErr.Message))
+			case platformErrors.CodeDuplicateCategoryName:
+				c.JSON(http.StatusConflict, errorResponse(domainErr.Message))
 			default:
 				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 			}

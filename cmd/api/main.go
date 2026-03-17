@@ -5,16 +5,23 @@ import (
 	authHandler "backend-go/internal/auth/handler"
 	authRepo "backend-go/internal/auth/repository"
 	authService "backend-go/internal/auth/service"
+	"backend-go/internal/categories"
+	categoryHandler "backend-go/internal/categories/handler"
+	categoryRepo "backend-go/internal/categories/repository"
+	categoryService "backend-go/internal/categories/service"
 	"backend-go/internal/platform/config"
 	"backend-go/internal/platform/db"
 	"backend-go/internal/platform/security"
 	"backend-go/internal/routes"
+	"backend-go/internal/transactions"
+	transactionHandler "backend-go/internal/transactions/handler"
+	transactionRepo "backend-go/internal/transactions/repository"
+	transactionService "backend-go/internal/transactions/service"
 	"backend-go/internal/users"
 	userHandler "backend-go/internal/users/handler"
 	userRepo "backend-go/internal/users/repository"
 	userService "backend-go/internal/users/service"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -42,7 +49,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer pool.Close()
-	fmt.Print("Connected to db successfully")
+	log.Println("Connected to db successfully")
 
 	// Initialize router
 	router := routes.NewRouter()
@@ -68,17 +75,33 @@ func main() {
 	}
 
 	jwtManager := security.NewJWTManager(cfg.JWT.Secret, "finai-api")
+
 	authRepo := authRepo.NewRepository(pool)
 	authService := authService.NewService(userService, jwtManager, authRepo, accessTTL, refreshTTL)
 	authHandler := authHandler.NewAuthHandler(authService, refreshTTL)
 
+	categoryRepo := categoryRepo.NewRepository(pool)
+	categoryService := categoryService.NewService(categoryRepo, categoryRepo)
+	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
+
+	txRepo := transactionRepo.NewRepository(pool)
+	txService := transactionService.NewService(txRepo, categoryRepo, categoryRepo)
+	txHandler := transactionHandler.NewTransactionHandler(txService)
+
 	api := router.Group("/api/v1")
 	// Initialize routes
-	users.RegisterRoutes(api, userHandler, jwtManager)
 	auth.RegisterRoutes(api, authHandler)
+	users.RegisterRoutes(api, userHandler, jwtManager)
+	categories.RegisterRoutes(api, categoryHandler, jwtManager)
+	transactions.RegisterRoutes(api, txHandler, jwtManager)
 
 	// Seed admin user
 	if err := users.SeedUser(ctx, userRepo, cfg.Admin); err != nil {
+		log.Fatal(err)
+	}
+
+	// Seed categories
+	if err := categories.SeedCategories(ctx, categoryRepo); err != nil {
 		log.Fatal(err)
 	}
 

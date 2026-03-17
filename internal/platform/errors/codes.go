@@ -22,4 +22,9 @@ const (
 	// Infrastructure
 	CodeInternalServer = "INTERNAL_SERVER_ERROR"
 	CodeDatabaseError  = "DATABASE_ERROR"
+
+	// Categories
+	CodeCategoryNotFound      = "CATEGORY_NOT_FOUND"
+	CodeCategoryHidden        = "CATEGORY_HIDDEN"
+	CodeDuplicateCategoryName = "DUPLICATE_CATEGORY_NAME"
 )
