@@ -61,7 +61,8 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 }
 
 type RenameRequest struct {
-	Name string `json:"name" binding:"required"`
+	Icon *string `json:"icon"`
+	Name string  `json:"name" binding:"required"`
 }
 
 func (h *CategoryHandler) Rename(c *gin.Context) {
@@ -83,7 +84,7 @@ func (h *CategoryHandler) Rename(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RenameCategory(c.Request.Context(), userID, id, req.Name); err != nil {
+	if err := h.service.RenameCategory(c.Request.Context(), userID, id, req.Name, req.Icon); err != nil {
 		c.Error(err)
 		return
 	}

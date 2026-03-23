@@ -25,5 +25,5 @@ type UserCategoryRepository interface {
 	GetByUserAndCategory(ctx context.Context, userID, categoryID uuid.UUID) (*UserCategory, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]UserCategory, error)
 	Update(ctx context.Context, uc *UserCategory) error
-	ExistsByName(ctx context.Context, userID uuid.UUID, name string) (bool, error)
+	ExistsByName(ctx context.Context, userID uuid.UUID, name string, excludeID *uuid.UUID) (bool, error)
 }

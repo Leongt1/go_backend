@@ -72,12 +72,15 @@ func NewSystemOverride(userID, categoryID uuid.UUID) *UserCategory {
 }
 
 // Rename sets a custom name on any user category
-func (uc *UserCategory) Rename(name string) error {
+func (uc *UserCategory) Rename(name string, icon *string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return ErrInvalidInput
 	}
 	uc.CustomName = strPtr(name)
+	if icon != nil {
+		uc.Icon = icon
+	}
 	uc.UpdatedAt = time.Now().UTC()
 	return nil
 }
