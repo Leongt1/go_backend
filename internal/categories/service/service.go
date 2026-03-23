@@ -70,7 +70,7 @@ func (s *Service) ListForUser(ctx context.Context, userID uuid.UUID) ([]domain.R
 
 func (s *Service) Create(ctx context.Context, userID uuid.UUID, name, icon string) error {
 	// check for duplicate
-	exists, err := s.userCategoryRepo.ExistsByName(ctx, userID, name)
+	exists, err := s.userCategoryRepo.ExistsByName(ctx, userID, name, nil)
 	if err != nil {
 		return err
 	}
@@ -88,36 +88,7 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, name, icon strin
 	return s.userCategoryRepo.Create(ctx, uc)
 }
 
-func (s *Service) RenameUserCategory(ctx context.Context, userID uuid.UUID, ucID uuid.UUID, name string) error {
-	uc, err := s.userCategoryRepo.GetUserCategoryByID(ctx, ucID)
-	if err != nil {
-		return err
-	}
-
-	// make sure this category belongs to the requesting user
-	if uc.UserID != userID {
-		return domain.ErrCannotModifyOther
-	}
-
-	// check duplicate name before renaming
-	exists, err := s.userCategoryRepo.ExistsByName(ctx, userID, name)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return domain.ErrDuplicateName
-	}
-
-	// rename the struct
-	if err := uc.Rename(name); err != nil {
-		return err
-	}
-
-	// persist to db
-	return s.userCategoryRepo.Update(ctx, uc)
-}
-
-func (s *Service) RenameCategory(ctx context.Context, userID uuid.UUID, id uuid.UUID, name string) error {
+func (s *Service) RenameCategory(ctx context.Context, userID uuid.UUID, id uuid.UUID, name string, icon *string) error {
 	// try user category first
 	uc, err := s.userCategoryRepo.GetUserCategoryByID(ctx, id)
 	if err == nil {
@@ -127,7 +98,7 @@ func (s *Service) RenameCategory(ctx context.Context, userID uuid.UUID, id uuid.
 		}
 
 		// check duplicate name before renaming
-		exists, err := s.userCategoryRepo.ExistsByName(ctx, userID, name)
+		exists, err := s.userCategoryRepo.ExistsByName(ctx, userID, name, &uc.ID)
 		if err != nil {
 			return err
 		}
@@ -136,7 +107,7 @@ func (s *Service) RenameCategory(ctx context.Context, userID uuid.UUID, id uuid.
 		}
 
 		// rename the struct when same user is requesting and doesn't have duplicate name
-		if err := uc.Rename(name); err != nil {
+		if err := uc.Rename(name, icon); err != nil {
 			return err
 		}
 
@@ -151,7 +122,7 @@ func (s *Service) RenameCategory(ctx context.Context, userID uuid.UUID, id uuid.
 	}
 
 	// check duplicate name before renaming
-	exists, err := s.userCategoryRepo.ExistsByName(ctx, userID, name)
+	exists, err := s.userCategoryRepo.ExistsByName(ctx, userID, name, nil)
 	if err != nil {
 		return err
 	}
@@ -166,8 +137,15 @@ func (s *Service) RenameCategory(ctx context.Context, userID uuid.UUID, id uuid.
 	}
 
 	if existing != nil {
+		exists, err = s.userCategoryRepo.ExistsByName(ctx, userID, name, &existing.ID)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return domain.ErrDuplicateName
+		}
 		// override exists — just rename it
-		if err := existing.Rename(name); err != nil {
+		if err := existing.Rename(name, icon); err != nil {
 			return err
 		}
 		return s.userCategoryRepo.Update(ctx, existing)
@@ -175,7 +153,7 @@ func (s *Service) RenameCategory(ctx context.Context, userID uuid.UUID, id uuid.
 
 	// no override yet — create one with custom name set
 	uc = domain.NewSystemOverride(userID, id)
-	if err := uc.Rename(name); err != nil {
+	if err := uc.Rename(name, icon); err != nil {
 		return err
 	}
 

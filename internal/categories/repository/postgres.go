@@ -222,17 +222,18 @@ func (r *Repository) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain
 	return results, nil
 }
 
-func (r *Repository) ExistsByName(ctx context.Context, userID uuid.UUID, name string) (bool, error) {
+func (r *Repository) ExistsByName(ctx context.Context, userID uuid.UUID, name string, excludeID *uuid.UUID) (bool, error) {
 	query := `
 		SELECT EXISTS (
 			SELECT 1
 			FROM user_categories
 			WHERE user_id = $1 AND custom_name = $2 AND hidden = false
+			AND ($3::uuid IS NULL OR id != $3)
 		)
 	`
 
 	var exists bool
-	err := r.pool.QueryRow(ctx, query, userID, name).Scan(&exists)
+	err := r.pool.QueryRow(ctx, query, userID, name, excludeID).Scan(&exists)
 	if err != nil {
 		return false, platformErrors.NewAppError(platformErrors.CodeDatabaseError, "Failed to check category name", err)
 	}
