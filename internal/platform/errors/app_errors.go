@@ -1,9 +1,12 @@
 package errors
 
+import "runtime"
+
 type AppError struct {
-	Code    string
-	Message string
-	Err     error
+	Code       string
+	Message    string
+	Err        error
+	StackTrace string
 }
 
 func (e *AppError) Error() string {
@@ -18,10 +21,15 @@ func (e *AppError) Unwrap() error {
 }
 
 func NewAppError(code, message string, err error) *AppError {
+	// Capture stack trace (4096 bytes is usually enough for most call stacks)
+	buf := make([]byte, 4096)
+	n := runtime.Stack(buf, false)
+
 	return &AppError{
-		Code:    code,
-		Message: message,
-		Err:     err,
+		Code:       code,
+		Message:    message,
+		Err:        err,
+		StackTrace: string(buf[:n]),
 	}
 }
 
