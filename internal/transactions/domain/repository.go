@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type TransactionFilter struct {
@@ -20,4 +21,5 @@ type TransactionRepository interface {
 	List(ctx context.Context, userID uuid.UUID, filter TransactionFilter) ([]Transaction, error)
 	Update(ctx context.Context, tx *Transaction) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	ReassignCategoryTx(ctx context.Context, tx pgx.Tx, userID, fromCategoryID, toCategoryID uuid.UUID) error
 }

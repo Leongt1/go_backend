@@ -80,11 +80,12 @@ func main() {
 	authService := authService.NewService(userService, jwtManager, authRepo, accessTTL, refreshTTL)
 	authHandler := authHandler.NewAuthHandler(authService, refreshTTL)
 
-	categoryRepo := categoryRepo.NewRepository(pool)
-	categoryService := categoryService.NewService(categoryRepo, categoryRepo)
-	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
-
 	txRepo := transactionRepo.NewRepository(pool)
+	
+	categoryRepo := categoryRepo.NewRepository(pool)
+	categoryService := categoryService.NewService(pool, categoryRepo, categoryRepo, txRepo)
+	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
+	
 	txService := transactionService.NewService(txRepo, categoryRepo, categoryRepo)
 	txHandler := transactionHandler.NewTransactionHandler(txService)
 

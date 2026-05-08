@@ -13,6 +13,7 @@ var defaultCategories = []struct {
 	Name string
 	Icon string
 }{
+	{Name: "Uncategorised", Icon: "📦"},
 	{Name: "Food & Dining", Icon: "🍔"},
 	{Name: "Rent & Housing", Icon: "🏠"},
 	{Name: "Transport", Icon: "🚗"},

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // CategoryRepository is the interface for category repository (system defaults)
@@ -11,6 +12,7 @@ import (
 type CategoryRepository interface {
 	List(ctx context.Context) ([]Category, error)
 	GetCategoryByID(ctx context.Context, id uuid.UUID) (*Category, error)
+	GetByName(ctx context.Context, name string) (*Category, error)
 }
 
 type CategorySeeder interface {
@@ -26,4 +28,5 @@ type UserCategoryRepository interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]UserCategory, error)
 	Update(ctx context.Context, uc *UserCategory) error
 	ExistsByName(ctx context.Context, userID uuid.UUID, name string, excludeID *uuid.UUID) (bool, error)
+	DeleteTx(ctx context.Context, tx pgx.Tx, userId, categoryID uuid.UUID) error
 }

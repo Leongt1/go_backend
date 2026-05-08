@@ -211,3 +211,22 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.T
 
 	return transactions, nil
 }
+
+func (r *Repository) ReassignCategoryTx(ctx context.Context, tx pgx.Tx, userID, fromCategoryID, toCategoryID uuid.UUID) error {
+	query := `
+		UPDATE transactions
+		SET category_id = $1
+		WHERE user_id = $2 AND category_id = $3
+	`
+
+	_, err := tx.Exec(ctx, query, toCategoryID, userID, fromCategoryID)
+	if err != nil {
+		return platformErrors.NewAppError(
+			platformErrors.CodeDatabaseError,
+			"failed to reassign category",
+			err,
+		)
+	}
+	
+	return nil
+}

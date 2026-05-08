@@ -240,3 +240,40 @@ func (r *Repository) ExistsByName(ctx context.Context, userID uuid.UUID, name st
 
 	return exists, nil
 }
+
+func (r *Repository) GetByName(ctx context.Context, name string) (*domain.Category, error) {
+	query := `
+		SELECT id, name, icon, created_at
+		FROM categories
+		WHERE name = $1
+	`
+
+	var cat domain.Category
+	err := r.pool.QueryRow(ctx, query, name).Scan(
+		&cat.ID,
+		&cat.Name,
+		&cat.Icon,
+		&cat.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrCategoryNotFound // no category with the name exists
+		}
+		return nil, platformErrors.NewAppError(platformErrors.CodeDatabaseError, "Failed to get category by name", err)
+	}
+
+	return &cat, nil
+}
+
+func (r *Repository) DeleteTx(ctx context.Context, tx pgx.Tx, userId, categoryID uuid.UUID) error {
+	query := `
+		DELETE from user_categories
+		WHERE user_id = $1
+		AND id = $2
+	`
+	if _, err := tx.Exec(ctx, query, userId, categoryID); err != nil {
+		return platformErrors.NewAppError(platformErrors.CodeDatabaseError, "Failed to delete user category", err)
+	}
+
+	return nil
+}

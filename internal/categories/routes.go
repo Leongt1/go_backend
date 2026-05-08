@@ -22,5 +22,6 @@ func RegisterRoutes(r *gin.RouterGroup, h *handler.CategoryHandler, jwtManager *
 		categories.PATCH("/:id/rename", h.Rename)
 		categories.PATCH("/:id/hide", h.Hide)
 		categories.PATCH("/:id/unhide", h.Unhide)
+		categories.DELETE("/:id", h.Delete)
 	}
 }

@@ -2,20 +2,28 @@ package service
 
 import (
 	"backend-go/internal/categories/domain"
+	transactionDomain "backend-go/internal/transactions/domain"
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Service struct {
+	db	*pgxpool.Pool
 	categoryRepo     domain.CategoryRepository
 	userCategoryRepo domain.UserCategoryRepository
+	transactionRepo	transactionDomain.TransactionRepository
 }
 
-func NewService(categoryRepo domain.CategoryRepository, userCategoryRepo domain.UserCategoryRepository) *Service {
+func NewService(db *pgxpool.Pool, categoryRepo domain.CategoryRepository, userCategoryRepo domain.UserCategoryRepository, transactionRepo transactionDomain.TransactionRepository) *Service {
 	return &Service{
+		db: db,
 		categoryRepo:     categoryRepo,
 		userCategoryRepo: userCategoryRepo,
+		transactionRepo:  transactionRepo,
 	}
 }
 
@@ -240,4 +248,64 @@ func (s *Service) HideSystemCategory(ctx context.Context, userID, categoryID uui
 	uc := domain.NewSystemOverride(userID, categoryID)
 	uc.Hide()
 	return s.userCategoryRepo.Create(ctx, uc)
+}
+
+func (s *Service) DeleteCategory(ctx context.Context, userId, categoryID uuid.UUID) error {
+	// get category to delete, check if it's custom or override and verify ownership
+	uc, err := s.userCategoryRepo.GetUserCategoryByID(ctx, categoryID)
+	if err != nil {
+		return err
+	}
+	if uc.UserID != userId {
+		return domain.ErrCannotModifyOther
+	}
+
+	// not allowing deletion of uncategorised category
+	if uc.CategoryID != nil {
+		sys, err := s.categoryRepo.GetCategoryByID(ctx, *uc.CategoryID)
+		if err == nil && sys.Name == "Uncategorised" {
+			return domain.ErrCannotDeleteSystemCategory
+		}
+	}
+
+	// get the "Uncategorised" category to reassign transactions before deleting the category
+	uncategorised, err := s.categoryRepo.GetByName(ctx, "Uncategorised")
+	if err != nil {
+		return err
+	}
+	if uncategorised == nil {
+		fmt.Println("uncategorised not found")
+		return domain.ErrCategoryNotFound
+	}
+
+	// check if the user already has an override for "Uncategorised" category, if not create one
+	uncategoriesdUC, err := s.userCategoryRepo.GetByUserAndCategory(ctx, userId, uncategorised.ID)
+	if err != nil {
+		return err
+	}
+
+	if uncategoriesdUC == nil {
+		uncategoriesdUC = domain.NewSystemOverride(userId, uncategorised.ID)
+		if err := s.userCategoryRepo.Create(ctx, uncategoriesdUC); err != nil {
+			return err
+		}
+	}
+
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// reassign transactions to "Uncategorised" category before deleting the category (only for custom categories)
+	if uc.CategoryID == nil {
+		if err := s.transactionRepo.ReassignCategoryTx(ctx, tx, userId, uc.ID, uncategoriesdUC.ID); err != nil {
+			return err
+		}
+	}
+	if err := s.userCategoryRepo.DeleteTx(ctx, tx, userId, categoryID); err != nil {
+		return err
+	}
+	
+	return tx.Commit(ctx)
 }
