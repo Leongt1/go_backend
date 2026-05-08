@@ -134,6 +134,29 @@ func (h *CategoryHandler) Unhide(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Category unhidden successfully"})
 }
 
+func (h *CategoryHandler) Delete(c *gin.Context) {
+	userId, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	categoryId, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
+	if err := h.service.DeleteCategory(c.Request.Context(), userId, categoryId); err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "category deleted successfully",
+	})
+}
+
 func getUserID(c *gin.Context) (uuid.UUID, error) {
 	userIDStr, exists := c.Get(middleware.ContextUserID)
 	if !exists {
