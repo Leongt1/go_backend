@@ -76,18 +76,18 @@ func main() {
 
 	jwtManager := security.NewJWTManager(cfg.JWT.Secret, "finai-api")
 
-	authRepo := authRepo.NewRepository(pool)
-	authService := authService.NewService(userService, jwtManager, authRepo, accessTTL, refreshTTL)
-	authHandler := authHandler.NewAuthHandler(authService, refreshTTL)
+	categoryRepo := categoryRepo.NewRepository(pool)
 
 	txRepo := transactionRepo.NewRepository(pool)
-	
-	categoryRepo := categoryRepo.NewRepository(pool)
-	categoryService := categoryService.NewService(pool, categoryRepo, categoryRepo, txRepo)
-	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
-	
-	txService := transactionService.NewService(txRepo, categoryRepo, categoryRepo)
+	txService := transactionService.NewService(txRepo, categoryRepo)
 	txHandler := transactionHandler.NewTransactionHandler(txService)
+	
+	categoryService := categoryService.NewService(pool, categoryRepo, txRepo)
+	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
+
+	authRepo := authRepo.NewRepository(pool)
+	authService := authService.NewService(userService, jwtManager, authRepo, categoryRepo, accessTTL, refreshTTL)
+	authHandler := authHandler.NewAuthHandler(authService, refreshTTL)
 
 	api := router.Group("/api/v1")
 	// Initialize routes
@@ -101,9 +101,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Seed categories
-	if err := categories.SeedCategories(ctx, categoryRepo); err != nil {
-		log.Fatal(err)
+	// seed categories for admin user
+	adminUser, err := userService.GetByEmail(ctx, cfg.Admin.Email)
+	if err != nil {
+		log.Fatal("Failed to get admin user:", err)
+	}
+
+	existing, err := categoryRepo.ListByUser(ctx, adminUser.ID)
+	if err != nil {
+		log.Fatal("Failed to check admin categories:", err)
+	}
+	if len(existing) == 0 {
+		if err := categories.SeedCategoriesForUser(ctx, adminUser.ID, categoryRepo); err != nil {
+			log.Fatal("Failed to seed admin categories:", err)
+		}
 	}
 
 	// Initialize server

@@ -25,7 +25,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 		return
 	}
 
-	categories, err := h.service.ListForUser(c.Request.Context(), userID)
+	categories, err := h.service.ListByUser(c.Request.Context(), userID)
 	if err != nil {
 		c.Error(err)
 		return

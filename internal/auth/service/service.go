@@ -2,6 +2,8 @@ package service
 
 import (
 	"backend-go/internal/auth/domain"
+	"backend-go/internal/categories"
+	categoryDomain "backend-go/internal/categories/domain"
 	"backend-go/internal/platform/security"
 	userDomain "backend-go/internal/users/domain"
 	"backend-go/internal/users/service"
@@ -14,6 +16,7 @@ type Service struct {
 	users       *service.Service
 	jwt         *security.JWTManager
 	refreshRepo domain.RefreshTokenRepository
+	categoryRepo categoryDomain.CategoryRepository
 	accessTTL   time.Duration
 	refreshTTL  time.Duration
 }
@@ -22,12 +25,14 @@ func NewService(
 	users *service.Service,
 	jwt *security.JWTManager,
 	refreshRepo domain.RefreshTokenRepository,
+	categoryRepo categoryDomain.CategoryRepository,
 	accessTTL, refreshTTL time.Duration,
 ) *Service {
 	return &Service{
 		users:       users,
 		jwt:         jwt,
 		refreshRepo: refreshRepo,
+		categoryRepo: categoryRepo,
 		accessTTL:   accessTTL,
 		refreshTTL:  refreshTTL,
 	}
@@ -193,7 +198,6 @@ func (s *Service) Signup(ctx context.Context, req *SignupInput) error {
 
 	gender, err := userDomain.ParseGender(req.Gender)
 	if err != nil {
-
 		return err
 	}
 
@@ -206,8 +210,17 @@ func (s *Service) Signup(ctx context.Context, req *SignupInput) error {
 		DateOfBirth: req.DateOfBirth,
 	}
 
-	err = s.users.CreateUser(ctx, createUser)
+	if err = s.users.CreateUser(ctx, createUser); err != nil {
+		return err
+	}
+
+	user, err := s.users.GetByEmail(ctx, email)
 	if err != nil {
+		return err
+	}
+
+	// seed categories
+	if err := categories.SeedCategoriesForUser(ctx, user.ID, s.categoryRepo); err != nil {
 		return err
 	}
 
