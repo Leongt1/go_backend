@@ -11,18 +11,15 @@ import (
 
 type Service struct {
 	repo             domain.TransactionRepository
-	userCategoryRepo categoryDomain.UserCategoryRepository
 	categoryRepo     categoryDomain.CategoryRepository
 }
 
 func NewService(
 	repo domain.TransactionRepository,
-	userCategoryRepo categoryDomain.UserCategoryRepository,
 	categoryRepo categoryDomain.CategoryRepository,
 ) *Service {
 	return &Service{
 		repo:             repo,
-		userCategoryRepo: userCategoryRepo,
 		categoryRepo:     categoryRepo,
 	}
 }
@@ -41,8 +38,7 @@ func (s *Service) CreateTransaction(
 	input CreateInput,
 ) error {
 	// resolves category and returns the user_categories row ID to store
-	resolvedCategoryID, err := s.resolveAndValidateCategory(ctx, input.UserID, input.CategoryID)
-	if err != nil {
+	if err := s.validateCategory(ctx, input.UserID, input.CategoryID); err != nil {
 		return err
 	}
 
@@ -53,7 +49,7 @@ func (s *Service) CreateTransaction(
 
 	tx, err := domain.NewTransaction(
 		input.UserID,
-		resolvedCategoryID,
+		input.CategoryID,
 		input.Description,
 		input.Amount,
 		txType,
@@ -130,11 +126,9 @@ func (s *Service) UpdateTransaction(ctx context.Context, userID, id uuid.UUID, r
 
 	// validate new category if provided
 	if req.CategoryID != nil {
-		resolvedCategoryID, err := s.resolveAndValidateCategory(ctx, userID, *req.CategoryID)
-		if err != nil {
+		if err := s.validateCategory(ctx, userID, *req.CategoryID); err != nil {
 			return nil, err
 		}
-		req.CategoryID = &resolvedCategoryID
 	}
 
 	// parse type if provided
@@ -178,43 +172,22 @@ func (s *Service) DeleteTransaction(ctx context.Context, userID, id uuid.UUID) e
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *Service) resolveAndValidateCategory(ctx context.Context, userID, categoryID uuid.UUID) (uuid.UUID, error) {
-	// try user_categories first
-	uc, err := s.userCategoryRepo.GetUserCategoryByID(ctx, categoryID)
-	if err == nil {
-		// found - check user
-		if uc.UserID != userID {
-			return uuid.Nil, domain.ErrCannotModifyOther
-		}
-		if uc.Hidden {
-			return uuid.Nil, categoryDomain.ErrCategoryHidden
-		}
-		return uc.ID, nil // return the id of that user_category
-	}
-
-	// check system default categories
-	_, err = s.categoryRepo.GetCategoryByID(ctx, categoryID)
+// validateCategory replaces the old resolveAndValidateCategory —
+// no more lazy creation, no more two-table lookup.
+// Every category is already a user_categories row seeded at signup.
+func (s *Service) validateCategory(ctx context.Context, userID, categoryID uuid.UUID) error {
+	c, err := s.categoryRepo.GetByID(ctx, categoryID)
 	if err != nil {
-		return uuid.Nil, categoryDomain.ErrCategoryNotFound
+		return err
 	}
 
-	// found - check for overriden category (check if user has hidden it)
-	existing, err := s.userCategoryRepo.GetByUserAndCategory(ctx, userID, categoryID)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if existing != nil {
-		if existing.Hidden {
-			return uuid.Nil, categoryDomain.ErrCategoryHidden
-		}
-		return existing.ID, nil
+	if c.UserID != userID {
+		return categoryDomain.ErrCannotModifyOther
 	}
 
-	// no override yet - create it lazily
-	uc = categoryDomain.NewSystemOverride(userID, categoryID)
-	if err := s.userCategoryRepo.Create(ctx, uc); err != nil {
-		return uuid.Nil, err
+	if c.Hidden {
+		return categoryDomain.ErrCategoryHidden
 	}
 
-	return uc.ID, nil
+	return nil
 }

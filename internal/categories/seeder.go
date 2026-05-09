@@ -4,7 +4,6 @@ import (
 	"backend-go/internal/categories/domain"
 	"context"
 	"log"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,30 +24,17 @@ var defaultCategories = []struct {
 	{Name: "Education", Icon: "📚"},
 }
 
-func SeedCategories(ctx context.Context, repo domain.CategorySeeder) error {
-	existing, err := repo.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	if len(existing) > 0 {
-		log.Println("Categories already seeded, skipping")
-		return nil
-	}
-
+func SeedCategoriesForUser(ctx context.Context, userID uuid.UUID, repo domain.CategoryRepository) error {
 	for _, c := range defaultCategories {
-		category := &domain.Category{
-			ID:        uuid.New(),
-			Name:      c.Name,
-			Icon:      c.Icon,
-			CreatedAt: time.Now().UTC(),
+		category, err := domain.NewCategory(userID, c.Name, c.Icon)
+		if err != nil {
+			return err
 		}
-
-		if err := repo.CreateCategory(ctx, category); err != nil {
+		if err := repo.Create(ctx, category); err != nil {
 			return err
 		}
 	}
 
-	log.Println("Default categories seeded successfully")
+	log.Printf("Default categories seeded for user %s", userID)
 	return nil
 }

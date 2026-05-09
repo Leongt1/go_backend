@@ -218,7 +218,6 @@ func (r *Repository) ReassignCategoryTx(ctx context.Context, tx pgx.Tx, userID, 
 		SET category_id = $1
 		WHERE user_id = $2 AND category_id = $3
 	`
-
 	_, err := tx.Exec(ctx, query, toCategoryID, userID, fromCategoryID)
 	if err != nil {
 		return platformErrors.NewAppError(
