@@ -113,7 +113,15 @@ func (b *Budget) Update(
 	periodUnit *PeriodUnit,
 	periodValue *int,
 	startDate *time.Time,
+	bType *BudgetType,
 ) error {
+	if bType != nil {
+		if *bType == "" {
+			return ErrInvalidInput
+		}
+		b.Type = *bType
+	}
+
 	if name != nil {
 		trimmed := strings.TrimSpace(*name)
 		if trimmed == "" {

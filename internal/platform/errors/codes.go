@@ -27,4 +27,8 @@ const (
 	CodeCategoryNotFound      = "CATEGORY_NOT_FOUND"
 	CodeCategoryHidden        = "CATEGORY_HIDDEN"
 	CodeDuplicateCategoryName = "DUPLICATE_CATEGORY_NAME"
+
+	// Budgets
+	CodeBudgetNotFound      = "BUDGET_NOT_FOUND"
+	CodeDuplicateBudgetName = "DUPLICATE_BUDGET_NAME"
 )

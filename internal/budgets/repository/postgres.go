@@ -295,7 +295,7 @@ func (r *Repository) getSavingsSum(
 	args := []any{userID, start, end}
 
 	if len(categoryIDs) > 0 {
-		query += " AND (type = 'Income' OR category_id = ANY($4))"
+		query += " AND category_id = ANY($4)"
 		args = append(args, categoryIDs)
 	}
 
@@ -306,6 +306,15 @@ func (r *Repository) getSavingsSum(
 	}
 
 	return result, nil
+}
+
+func (r *Repository) ClearCategoriesFromBudget(ctx context.Context, budgetID uuid.UUID) error {
+	query := `DELETE FROM budget_categories WHERE budget_id = $1`
+	_, err := r.pool.Exec(ctx, query, budgetID)
+	if err != nil {
+		return platformErrors.NewAppError(platformErrors.CodeDatabaseError, "Failed to clear budget categories", err)
+	}
+	return nil
 }
 
 // Helper function to create pointers

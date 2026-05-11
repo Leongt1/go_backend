@@ -18,6 +18,7 @@ type BudgetRepository interface {
 	AddCategoryToBudget(ctx context.Context, budgetID, categoryID uuid.UUID) error
 	RemoveCategoryFromBudget(ctx context.Context, budgetID, categoryID uuid.UUID) error
 	GetCategoriesForBudget(ctx context.Context, budgetID uuid.UUID) ([]uuid.UUID, error)
+	ClearCategoriesFromBudget(ctx context.Context, budgetID uuid.UUID) error
 
 	// Spent amount calculation
 	GetSpentAmount(ctx context.Context, budget *Budget, start, end time.Time) (int64, error)
