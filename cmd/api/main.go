@@ -5,6 +5,10 @@ import (
 	authHandler "backend-go/internal/auth/handler"
 	authRepo "backend-go/internal/auth/repository"
 	authService "backend-go/internal/auth/service"
+	"backend-go/internal/budgets"
+	budgetHandler "backend-go/internal/budgets/handler"
+	budgetRepo "backend-go/internal/budgets/repository"
+	budgetService "backend-go/internal/budgets/service"
 	"backend-go/internal/categories"
 	categoryHandler "backend-go/internal/categories/handler"
 	categoryRepo "backend-go/internal/categories/repository"
@@ -81,9 +85,13 @@ func main() {
 	txRepo := transactionRepo.NewRepository(pool)
 	txService := transactionService.NewService(txRepo, categoryRepo)
 	txHandler := transactionHandler.NewTransactionHandler(txService)
-	
+
 	categoryService := categoryService.NewService(pool, categoryRepo, txRepo)
 	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
+
+	budgetRepo := budgetRepo.NewRepository(pool, txRepo)
+	budgetService := budgetService.NewService(budgetRepo, categoryRepo, txRepo)
+	budgetHandler := budgetHandler.NewBudgetHandler(budgetService)
 
 	authRepo := authRepo.NewRepository(pool)
 	authService := authService.NewService(userService, jwtManager, authRepo, categoryRepo, accessTTL, refreshTTL)
@@ -95,6 +103,7 @@ func main() {
 	users.RegisterRoutes(api, userHandler, jwtManager)
 	categories.RegisterRoutes(api, categoryHandler, jwtManager)
 	transactions.RegisterRoutes(api, txHandler, jwtManager)
+	budgets.RegisterRoutes(api, budgetHandler, jwtManager)
 
 	// Seed admin user
 	if err := users.SeedUser(ctx, userRepo, cfg.Admin); err != nil {

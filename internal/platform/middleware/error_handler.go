@@ -55,6 +55,8 @@ func ErrorHandler() gin.HandlerFunc {
 				c.JSON(http.StatusGone, errorResponse(domainErr.Message))
 			case platformErrors.CodeDuplicateCategoryName:
 				c.JSON(http.StatusConflict, errorResponse(domainErr.Message))
+			case platformErrors.CodeTransactionNotFound:
+    			c.JSON(http.StatusNotFound, errorResponse(domainErr.Message))
 			default:
 				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 			}

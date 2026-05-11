@@ -43,8 +43,8 @@ func (uc *Category) Rename(name string, icon *string) error {
 		return ErrInvalidInput
 	}
 	uc.Name = name
-	if icon != "" {
-		uc.Icon = icon
+	if icon != nil {
+		uc.Icon = *icon
 	}
 	uc.UpdatedAt = time.Now().UTC()
 	return nil

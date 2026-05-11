@@ -162,7 +162,7 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.T
 
 	if filter.DateTo != nil {
 		args = append(args, *filter.DateTo)
-		conditions = append(conditions, fmt.Sprintf("date <= $%d", len(args)))
+		conditions = append(conditions, fmt.Sprintf("date < $%d", len(args)))
 	}
 
 	// Build the final query
@@ -226,6 +226,6 @@ func (r *Repository) ReassignCategoryTx(ctx context.Context, tx pgx.Tx, userID, 
 			err,
 		)
 	}
-	
+
 	return nil
 }
