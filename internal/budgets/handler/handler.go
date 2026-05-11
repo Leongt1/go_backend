@@ -144,11 +144,12 @@ func (h *BudgetHandler) Create(c *gin.Context) {
 }
 
 type UpdateBudgetRequest struct {
-	Name        *string  `json:"name"`
-	Amount      *float64 `json:"amount" binding:"omitempty,gt=0"`
-	PeriodUnit  *string  `json:"period_unit" binding:"omitempty,oneof=day week month year"`
-	PeriodValue *int     `json:"period_value" binding:"omitempty,gt=0"`
-	StartDate   *string  `json:"start_date"` // ISO 8601 format
+	Name        *string            `json:"name"`
+	Type        *domain.BudgetType `json:"type" binding:"omitempty,oneof=category overall"`
+	Amount      *float64           `json:"amount" binding:"omitempty,gt=0"`
+	PeriodUnit  *string            `json:"period_unit" binding:"omitempty,oneof=day week month year"`
+	PeriodValue *int               `json:"period_value" binding:"omitempty,gt=0"`
+	StartDate   *string            `json:"start_date"`
 }
 
 func (h *BudgetHandler) Update(c *gin.Context) {
@@ -169,6 +170,12 @@ func (h *BudgetHandler) Update(c *gin.Context) {
 		log.Println("Error parsing budget ID:", err)
 		c.Error(domain.ErrInvalidInput)
 		return
+	}
+
+	var bType *domain.BudgetType
+	if req.Type != nil {
+		bt := domain.BudgetType(*req.Type)
+		bType = &bt
 	}
 
 	// Parse start date if provided
@@ -195,7 +202,12 @@ func (h *BudgetHandler) Update(c *gin.Context) {
 		amountPaisa = &val
 	}
 
-	if err := h.service.Update(c.Request.Context(), budgetID, userID, req.Name, amountPaisa, periodUnit, req.PeriodValue, startDate); err != nil {
+	if err := h.service.Update(c.Request.Context(), budgetID,
+		userID, req.Name,
+		amountPaisa,
+		periodUnit, req.PeriodValue,
+		startDate, bType,
+	); err != nil {
 		c.Error(err)
 		return
 	}

@@ -84,27 +84,32 @@ func (s *Service) Create(
 // Update updates an existing budget
 func (s *Service) Update(
 	ctx context.Context,
-	budgetID uuid.UUID,
-	userID uuid.UUID,
+	budgetID, userID uuid.UUID,
 	name *string,
 	amount *int64,
-	periodUnit *domain.PeriodUnit,
-	periodValue *int,
+	periodUnit *domain.PeriodUnit, periodValue *int,
 	startDate *time.Time,
+	bType *domain.BudgetType,
 ) error {
 	// Get the budget to verify ownership
 	budget, err := s.budgetRepo.GetByID(ctx, budgetID)
 	if err != nil {
 		return err
 	}
-
 	// Verify user owns this budget
 	if budget.UserID != userID {
 		return domain.ErrCannotModifyOther
 	}
 
+	// Clean up categories if type changes from 'category' to 'overall'
+	if bType != nil && *bType == domain.BudgetTypeOverall && budget.Type == domain.BudgetTypeCategory {
+		if err := s.budgetRepo.ClearCategoriesFromBudget(ctx, budgetID); err != nil {
+			return err
+		}
+	}
+
 	// Apply updates
-	if err := budget.Update(name, amount, periodUnit, periodValue, startDate); err != nil {
+	if err := budget.Update(name, amount, periodUnit, periodValue, startDate, bType); err != nil {
 		return err
 	}
 
@@ -154,11 +159,9 @@ func (s *Service) AddCategoryToBudget(ctx context.Context, budgetID, categoryID,
 		return err
 	}
 
-	if category.UserID != userID {
-		return platformErrors.NewDomainError(
-			platformErrors.CodeForbidden,
-			"Cannot add category from another user",
-		)
+	// Check if category is hidden
+	if category.Hidden {
+		return platformErrors.NewDomainError(platformErrors.CodeCategoryHidden, "Cannot add a hidden category to a budget")
 	}
 
 	return s.budgetRepo.AddCategoryToBudget(ctx, budgetID, categoryID)
