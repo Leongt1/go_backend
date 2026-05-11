@@ -152,9 +152,7 @@ func (h *CategoryHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "category deleted successfully",
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "Category deleted successfully"})
 }
 
 func getUserID(c *gin.Context) (uuid.UUID, error) {
