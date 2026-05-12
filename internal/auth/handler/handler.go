@@ -58,7 +58,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	refreshTokenStr, err := c.Cookie("refresh_token")
 	if err != nil {
-		c.Error(domain.ErrInvalidInput)
+		c.Error(domain.ErrInvalidRefreshToken)
 		return
 	}
 
