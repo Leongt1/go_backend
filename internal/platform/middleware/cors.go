@@ -10,7 +10,8 @@ import (
 func CORS() gin.HandlerFunc {
 	return cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:5173", // Next.js dev server
+			"http://localhost:5173",           // Next.js dev server
+			"https://fin-ai-wheat.vercel.app", // Production frontend
 		},
 		AllowMethods: []string{
 			"GET",
