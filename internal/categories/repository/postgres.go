@@ -51,10 +51,10 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Categor
 
 	var c domain.Category
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&c.ID, 
+		&c.ID,
 		&c.UserID,
-		&c.Name, 
-		&c.Icon, 
+		&c.Name,
+		&c.Icon,
 		&c.Hidden,
 		&c.CreatedAt,
 		&c.UpdatedAt,
@@ -100,7 +100,7 @@ func (r *Repository) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain
 		SELECT id, user_id, name, icon, hidden, created_at, updated_at
 		FROM user_categories
 		WHERE user_id = $1
-		ORDER BY created_at ASC
+		ORDER BY created_at ASC, id ASC
 	`
 
 	rows, err := r.pool.Query(ctx, query, userID)
