@@ -115,17 +115,23 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 }
 
 type SignupRequest struct {
-	Name        string     `json:"name" binding:"required"`
-	Email       string     `json:"email" binding:"required"`
-	Password    string     `json:"password" binding:"required"`
-	Role        string     `json:"role" binding:"required"`
-	Gender      string     `json:"gender" binding:"required"`
-	DateOfBirth *time.Time `json:"date_of_birth"`
+	Name            string     `json:"name" binding:"required"`
+	Email           string     `json:"email" binding:"required"`
+	Password        string     `json:"password" binding:"required"`
+	ConfirmPassword string     `json:"confirm_password" binding:"required"`
+	Role            string     `json:"role" binding:"required"`
+	Gender          string     `json:"gender" binding:"required"`
+	DateOfBirth     *time.Time `json:"date_of_birth"`
 }
 
 func (h *AuthHandler) Signup(c *gin.Context) {
 	var req SignupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
+	if req.Password != req.ConfirmPassword {
 		c.Error(domain.ErrInvalidInput)
 		return
 	}
@@ -190,10 +196,14 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
+	if req.Password != req.ConfirmPassword {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
 	if err := h.service.PasswordReset(c.Request.Context(), &service.PasswordResetInput{
-		ResetToken:      rawToken,
-		Password:        req.Password,
-		ConfirmPassword: req.ConfirmPassword,
+		ResetToken: rawToken,
+		Password:   req.Password,
 	}); err != nil {
 		c.Error(domain.ErrInvalidPasswordResetToken)
 		return
