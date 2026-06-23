@@ -13,4 +13,5 @@ type UserRepository interface {
 	Update(ctx context.Context, id uuid.UUID, user *User) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context) ([]User, error)
+	UpdatePassword(ctx context.Context, userID uuid.UUID, passwordHash string) error
 }

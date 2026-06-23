@@ -13,28 +13,37 @@ import (
 )
 
 type Service struct {
-	users       *service.Service
-	jwt         *security.JWTManager
-	refreshRepo domain.RefreshTokenRepository
+	users             *service.Service
+	jwt               *security.JWTManager
+	refreshRepo       domain.RefreshTokenRepository
+	passwordResetRepo domain.PasswordResetRepository
+
 	categoryRepo categoryDomain.CategoryRepository
-	accessTTL   time.Duration
-	refreshTTL  time.Duration
+
+	accessTTL        time.Duration
+	refreshTTL       time.Duration
+	resetPasswordTTL time.Duration
 }
 
 func NewService(
 	users *service.Service,
 	jwt *security.JWTManager,
 	refreshRepo domain.RefreshTokenRepository,
+	passwordResetRepo domain.PasswordResetRepository,
 	categoryRepo categoryDomain.CategoryRepository,
-	accessTTL, refreshTTL time.Duration,
+	accessTTL,
+	refreshTTL,
+	resetPasswordTTL time.Duration,
 ) *Service {
 	return &Service{
-		users:       users,
-		jwt:         jwt,
-		refreshRepo: refreshRepo,
-		categoryRepo: categoryRepo,
-		accessTTL:   accessTTL,
-		refreshTTL:  refreshTTL,
+		users:             users,
+		jwt:               jwt,
+		refreshRepo:       refreshRepo,
+		passwordResetRepo: passwordResetRepo,
+		categoryRepo:      categoryRepo,
+		accessTTL:         accessTTL,
+		refreshTTL:        refreshTTL,
+		resetPasswordTTL:  resetPasswordTTL,
 	}
 }
 

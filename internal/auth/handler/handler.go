@@ -147,3 +147,19 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		"message": "Signup successful",
 	})
 }
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required"`
+}
+
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Email sent",
+	})
+}
