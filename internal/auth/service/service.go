@@ -285,16 +285,11 @@ func (s *Service) ForgotPassword(ctx context.Context, req *ForgotPasswordInput) 
 }
 
 type PasswordResetInput struct {
-	ResetToken      string
-	Password        string
-	ConfirmPassword string
+	ResetToken string
+	Password   string
 }
 
 func (s *Service) PasswordReset(ctx context.Context, req *PasswordResetInput) error {
-	if req.Password != req.ConfirmPassword {
-		return platformErrors.ErrComparePassword
-	}
-
 	hashedToken := security.HashToken(req.ResetToken)
 	resetToken, err := s.passwordResetRepo.GetPasswordResetTokenByHash(ctx, hashedToken)
 	if err != nil {
