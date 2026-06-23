@@ -10,6 +10,7 @@ type Config struct {
 	JWT           JWTConfig
 	Admin         AdminConfig
 	ResetPassword ResetPasswordConfig
+	Email         EmailConfig
 }
 
 type DatabaseConfig struct {
@@ -36,6 +37,25 @@ type AdminConfig struct {
 	Password string
 }
 
+type ResendConfig struct {
+	APIKey string
+	From   string
+}
+
+type SMTPConfig struct {
+	MailTrapAPIKey string
+	Host           string
+	Port           string
+	Username       string
+	Password       string
+	From           string
+}
+
+type EmailConfig struct {
+	Resend ResendConfig
+	SMTP   SMTPConfig
+}
+
 func Load() *Config {
 	cfg := &Config{
 		Database: DatabaseConfig{
@@ -57,6 +77,20 @@ func Load() *Config {
 		},
 		ResetPassword: ResetPasswordConfig{
 			ResetPasswordTTL: os.Getenv("RESET_PASSWORD_TTL"),
+		},
+		Email: EmailConfig{
+			Resend: ResendConfig{
+				APIKey: os.Getenv("RESEND_API_KEY"),
+				From:   os.Getenv("RESEND_FROM"),
+			},
+			SMTP: SMTPConfig{
+				MailTrapAPIKey: os.Getenv("MAILTRAP_API_KEY"),
+				Host:           os.Getenv("SMTP_HOST"),
+				Port:           os.Getenv("SMTP_PORT"),
+				Username:       os.Getenv("SMTP_USERNAME"),
+				Password:       os.Getenv("SMTP_PASSWORD"),
+				From:           os.Getenv("SMTP_FROM"),
+			},
 		},
 	}
 

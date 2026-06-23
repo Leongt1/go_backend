@@ -7,6 +7,7 @@ toolchain go1.24.13
 require (
 	github.com/gin-contrib/cors v1.7.6
 	github.com/google/uuid v1.6.0
+	github.com/resend/resend-go/v3 v3.9.2
 	golang.org/x/crypto v0.48.0
 )
 

@@ -4,6 +4,7 @@ import (
 	"backend-go/internal/auth/domain"
 	"backend-go/internal/categories"
 	categoryDomain "backend-go/internal/categories/domain"
+	"backend-go/internal/platform/email"
 	platformErrors "backend-go/internal/platform/errors"
 	"backend-go/internal/platform/security"
 	userDomain "backend-go/internal/users/domain"
@@ -24,6 +25,8 @@ type Service struct {
 
 	categoryRepo categoryDomain.CategoryRepository
 
+	emailProvider email.Provider
+
 	accessTTL        time.Duration
 	refreshTTL       time.Duration
 	resetPasswordTTL time.Duration
@@ -35,6 +38,7 @@ func NewService(
 	refreshRepo domain.RefreshTokenRepository,
 	passwordResetRepo domain.PasswordResetRepository,
 	categoryRepo categoryDomain.CategoryRepository,
+	emailProvider email.Provider,
 	accessTTL,
 	refreshTTL,
 	resetPasswordTTL time.Duration,
@@ -45,6 +49,7 @@ func NewService(
 		refreshRepo:       refreshRepo,
 		passwordResetRepo: passwordResetRepo,
 		categoryRepo:      categoryRepo,
+		emailProvider:     emailProvider,
 		accessTTL:         accessTTL,
 		refreshTTL:        refreshTTL,
 		resetPasswordTTL:  resetPasswordTTL,
@@ -244,39 +249,39 @@ type ForgotPasswordInput struct {
 	Email string
 }
 
-func (s *Service) ForgotPassword(ctx context.Context, req *ForgotPasswordInput) (string, error) {
+func (s *Service) ForgotPassword(ctx context.Context, req *ForgotPasswordInput) error {
 	if req.Email == "" {
-		return "", nil // user not found
+		return nil // user not found
 	}
 
 	user, err := s.users.GetByEmail(ctx, req.Email)
 	if err != nil {
-		return "", err
-	}
-
-	if user == nil {
-		return "", nil // user not found
+		return nil
 	}
 
 	if err := s.passwordResetRepo.DeletePasswordResetTokensByUserID(ctx, user.ID); err != nil {
-		return "", err
+		return err
 	}
 
 	resetToken, err := security.GenerateSecureToken()
 	if err != nil {
-		return "", nil
+		return err
 	}
 
 	hashedToken := security.HashToken(resetToken)
 	if passwordResetToken := domain.NewPasswordResetToken(user.ID, hashedToken, s.resetPasswordTTL); passwordResetToken != nil {
 		if err := s.passwordResetRepo.CreatePasswordResetToken(ctx, passwordResetToken); err != nil {
-			return "", err
+			return err
 		}
 	}
 
 	link := fmt.Sprint(`http://localhost:8080/api/v1/auth/reset-password?token=` + resetToken)
 
-	return link, nil
+	return s.emailProvider.Send(ctx, email.SendEmailInput{
+		To:      user.Email,
+		Subject: "Reset your password",
+		HTML:    email.PasswordResetHTML(link),
+	})
 }
 
 type PasswordResetInput struct {

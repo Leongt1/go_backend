@@ -159,7 +159,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	link, err := h.service.ForgotPassword(c.Request.Context(), &service.ForgotPasswordInput{
+	err := h.service.ForgotPassword(c.Request.Context(), &service.ForgotPasswordInput{
 		Email: req.Email,
 	})
 	if err != nil {
@@ -169,7 +169,6 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "If that email exists, a reset link has been sent",
-		"link":    link,
 	})
 }
 
