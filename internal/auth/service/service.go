@@ -274,9 +274,9 @@ func (s *Service) ForgotPassword(ctx context.Context, req *ForgotPasswordInput) 
 		}
 	}
 
-	email_link := fmt.Sprint(`http://localhost:8080/auth/reset-password?token=` + resetToken)
+	link := fmt.Sprint(`http://localhost:8080/api/v1/auth/reset-password?token=` + resetToken)
 
-	return email_link, nil
+	return link, nil
 }
 
 type PasswordResetInput struct {
@@ -309,9 +309,5 @@ func (s *Service) PasswordReset(ctx context.Context, req *PasswordResetInput) er
 		return err
 	}
 
-	if err := s.passwordResetRepo.MarkPasswordResetTokenUsed(ctx, resetToken.ID); err != nil {
-		return err
-	}
-
-	return nil
+	return s.passwordResetRepo.MarkPasswordResetTokenUsed(ctx, resetToken.ID)
 }
