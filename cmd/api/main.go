@@ -77,6 +77,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Invalid REFRESH_TTL:", err)
 	}
+	resetPasswordTTL, err := time.ParseDuration(cfg.ResetPassword.ResetPasswordTTL)
+	if err != nil {
+		log.Fatal("Invalid RESET_PASSWORD_TOKEN:", err)
+	}
 
 	jwtManager := security.NewJWTManager(cfg.JWT.Secret, "finai-api")
 
@@ -94,7 +98,7 @@ func main() {
 	budgetHandler := budgetHandler.NewBudgetHandler(budgetService)
 
 	authRepo := authRepo.NewRepository(pool)
-	authService := authService.NewService(userService, jwtManager, authRepo, categoryRepo, accessTTL, refreshTTL)
+	authService := authService.NewService(userService, jwtManager, authRepo, authRepo, categoryRepo, accessTTL, refreshTTL, resetPasswordTTL)
 	authHandler := authHandler.NewAuthHandler(authService, refreshTTL)
 
 	api := router.Group("/api/v1")

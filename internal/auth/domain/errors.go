@@ -9,4 +9,5 @@ var (
 	ErrInvalidCredentials        = platformErrors.NewDomainError(platformErrors.CodeInvalidCredentials, "Invalid credentials")
 	ErrInvalidRefreshToken       = platformErrors.NewDomainError(platformErrors.CodeInvalidCredentials, "Invalid refresh token")
 	ErrInvalidPasswordResetToken = platformErrors.NewDomainError(platformErrors.CodeInvalidCredentials, "Invalid password reset token")
+	ErrPasswordResetFailed       = platformErrors.NewDomainError(platformErrors.CodeFailedToResetPassword, "Failed to reset password")
 )

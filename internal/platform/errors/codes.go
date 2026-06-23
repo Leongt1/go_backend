@@ -8,7 +8,8 @@ const (
 	CodeNotFound     = "NOT_FOUND"
 
 	// Auth
-	CodeInvalidCredentials = "INVALID_CREDENTIALS"
+	CodeInvalidCredentials    = "INVALID_CREDENTIALS"
+	CodeFailedToResetPassword = "PASSWORD_RESET_FAILED"
 
 	// User
 	CodeUserNotFound       = "USER_NOT_FOUND"

@@ -200,3 +200,7 @@ func (s *Service) ListUsers(ctx context.Context) ([]domain.User, error) {
 
 	return users, nil
 }
+
+func (s *Service) UpdatePassword(ctx context.Context, userID uuid.UUID, hashedPassword string) error {
+	return s.repo.UpdatePassword(ctx, userID, hashedPassword)
+}

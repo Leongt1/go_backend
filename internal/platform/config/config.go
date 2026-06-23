@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	Database DatabaseConfig
-	JWT      JWTConfig
-	Admin    AdminConfig
+	Database      DatabaseConfig
+	JWT           JWTConfig
+	Admin         AdminConfig
+	ResetPassword ResetPasswordConfig
 }
 
 type DatabaseConfig struct {
@@ -23,6 +24,10 @@ type JWTConfig struct {
 	Secret     string
 	AccessTTL  string
 	RefreshTTL string
+}
+
+type ResetPasswordConfig struct {
+	ResetPasswordTTL string
 }
 
 type AdminConfig struct {
@@ -50,6 +55,9 @@ func Load() *Config {
 			Email:    os.Getenv("ADMIN_EMAIL"),
 			Password: os.Getenv("ADMIN_PASSWORD"),
 		},
+		ResetPassword: ResetPasswordConfig{
+			ResetPasswordTTL: os.Getenv("RESET_PASSWORD_TTL"),
+		},
 	}
 
 	validate(cfg)
@@ -71,6 +79,10 @@ func validate(cfg *Config) {
 
 	if cfg.JWT.RefreshTTL == "" {
 		log.Fatal("REFRESH_TTL is required")
+	}
+
+	if cfg.ResetPassword.ResetPasswordTTL == "" {
+		log.Fatal("RESET_PASSWORD_TTL is required")
 	}
 
 	if cfg.Admin.Email == "" {

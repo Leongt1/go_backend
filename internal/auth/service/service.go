@@ -4,12 +4,16 @@ import (
 	"backend-go/internal/auth/domain"
 	"backend-go/internal/categories"
 	categoryDomain "backend-go/internal/categories/domain"
+	platformErrors "backend-go/internal/platform/errors"
 	"backend-go/internal/platform/security"
 	userDomain "backend-go/internal/users/domain"
 	"backend-go/internal/users/service"
 	"context"
+	"fmt"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
@@ -230,6 +234,77 @@ func (s *Service) Signup(ctx context.Context, req *SignupInput) error {
 
 	// seed categories
 	if err := categories.SeedCategoriesForUser(ctx, user.ID, s.categoryRepo); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type ForgotPasswordInput struct {
+	Email string
+}
+
+func (s *Service) ForgotPassword(ctx context.Context, req *ForgotPasswordInput) (string, error) {
+	if req.Email == "" {
+		return "", nil // user not found
+	}
+
+	user, err := s.users.GetByEmail(ctx, req.Email)
+	if err != nil {
+		return "", err
+	}
+
+	if user == nil {
+		return "", nil // user not found
+	}
+
+	if err := s.passwordResetRepo.DeletePasswordResetTokensByUserID(ctx, user.ID); err != nil {
+		return "", err
+	}
+
+	resetToken, err := security.GenerateSecureToken()
+	if err != nil {
+		return "", nil
+	}
+
+	hashedToken := security.HashToken(resetToken)
+	if PasswordResetToken := domain.NewPasswordResetToken(user.ID, hashedToken, s.resetPasswordTTL); PasswordResetToken != nil {
+		s.passwordResetRepo.CreatePasswordResetToken(ctx, PasswordResetToken)
+	}
+
+	email_link := fmt.Sprintln(`http://localhost:5432/auth/reset-password?token=` + resetToken)
+
+	return email_link, nil
+}
+
+type PasswordResetInput struct {
+	ResetToken      string
+	Password        string
+	ConfirmPassword string
+}
+
+func (s *Service) PasswordReset(ctx context.Context, req *PasswordResetInput) error {
+	hashedToken := security.HashToken(req.ResetToken)
+
+	resetToken, err := s.passwordResetRepo.GetPasswordResetTokenByHash(ctx, hashedToken)
+	if err != nil {
+		return err
+	}
+
+	if resetToken == nil {
+		return domain.ErrInvalidPasswordResetToken
+	}
+
+	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return platformErrors.ErrHashPassword
+	}
+
+	if err := s.users.UpdatePassword(ctx, resetToken.UserID, string(hasedPassword)); err != nil {
+		return err
+	}
+
+	if err := s.passwordResetRepo.MarkPasswordResetTokenUsed(ctx, resetToken.ID); err != nil {
 		return err
 	}
 
