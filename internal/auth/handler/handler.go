@@ -185,7 +185,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	rawToken := c.Query("reset_token")
+	rawToken := c.Query("token")
 	if rawToken == "" {
 		c.Error(domain.ErrInvalidCredentials)
 		return

@@ -10,7 +10,7 @@ type PasswordResetToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	TokenHash string
-	ExpiresAt time.Duration
+	ExpiresAt time.Time
 	UsedAt    *time.Time
 	CreatedAt time.Time
 }
@@ -24,7 +24,7 @@ func NewPasswordResetToken(
 		ID:        uuid.New(),
 		UserID:    userID,
 		TokenHash: tokenHash,
-		ExpiresAt: expiresAt,
+		ExpiresAt: time.Now().UTC().Add(expiresAt),
 		CreatedAt: time.Now(),
 	}
 }
