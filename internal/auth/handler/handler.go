@@ -159,7 +159,48 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
+	link, err := h.service.ForgotPassword(c.Request.Context(), &service.ForgotPasswordInput{
+		Email: req.Email,
+	})
+	if err != nil {
+		c.Error(domain.ErrPasswordResetFailed)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Email sent",
+		"link":    link,
+	})
+}
+
+type ResetPasswordRequest struct {
+	Password        string `json:"password" binding:"required"`
+	ConfirmPassword string `json:"confirm_password" binding:"required"`
+}
+
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
+	rawToken := c.Query("reset_token")
+	if rawToken == "" {
+		c.Error(domain.ErrInvalidCredentials)
+		return
+	}
+
+	if err := h.service.PasswordReset(c.Request.Context(), &service.PasswordResetInput{
+		ResetToken:      rawToken,
+		Password:        req.Password,
+		ConfirmPassword: req.ConfirmPassword,
+	}); err != nil {
+		c.Error(domain.ErrInvalidPasswordResetToken)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Password reset successfully. Login now",
 	})
 }

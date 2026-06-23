@@ -200,5 +200,18 @@ func (r *Repository) List(ctx context.Context) ([]domain.User, error) {
 }
 
 func (r *Repository) UpdatePassword(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	query := `
+		UPDATE users 
+		SET password_hash = $1
+		WHERE id = $2;
+	`
+	_, err := r.db.Exec(ctx, query, passwordHash, userID)
+	if err != nil {
+		return platformErrors.NewAppError(
+			platformErrors.CodeDatabaseError,
+			"failed to update password",
+			err,
+		)
+	}
 	return nil
 }
