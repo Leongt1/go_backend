@@ -15,6 +15,7 @@ import (
 	categoryService "backend-go/internal/categories/service"
 	"backend-go/internal/platform/config"
 	"backend-go/internal/platform/db"
+	"backend-go/internal/platform/email"
 	"backend-go/internal/platform/security"
 	"backend-go/internal/routes"
 	"backend-go/internal/transactions"
@@ -84,6 +85,21 @@ func main() {
 
 	jwtManager := security.NewJWTManager(cfg.JWT.Secret, "finai-api")
 
+	// For testing — swap in NewResendProvider when ready
+	emailProvider := email.NewSMTPProvider(
+		cfg.Email.SMTP.Host,
+		cfg.Email.SMTP.Port,
+		cfg.Email.SMTP.Username,
+		cfg.Email.SMTP.Password,
+		cfg.Email.SMTP.From,
+	)
+
+	// or for Resend:
+	// emailProvider := email.NewResendProvider(
+	// 	cfg.Email.Resend.APIKey,
+	// 	cfg.Email.Resend.From,
+	// )
+
 	categoryRepo := categoryRepo.NewRepository(pool)
 
 	txRepo := transactionRepo.NewRepository(pool)
@@ -98,7 +114,12 @@ func main() {
 	budgetHandler := budgetHandler.NewBudgetHandler(budgetService)
 
 	authRepo := authRepo.NewRepository(pool)
-	authService := authService.NewService(userService, jwtManager, authRepo, authRepo, categoryRepo, accessTTL, refreshTTL, resetPasswordTTL)
+	authService := authService.NewService(
+		userService, jwtManager,
+		authRepo, authRepo, categoryRepo,
+		emailProvider,
+		accessTTL, refreshTTL, resetPasswordTTL,
+	)
 	authHandler := authHandler.NewAuthHandler(authService, refreshTTL)
 
 	api := router.Group("/api/v1")
