@@ -198,3 +198,7 @@ func (r *Repository) List(ctx context.Context) ([]domain.User, error) {
 	}
 	return users, nil
 }
+
+func (r *Repository) UpdatePassword(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	return nil
+}
