@@ -268,11 +268,13 @@ func (s *Service) ForgotPassword(ctx context.Context, req *ForgotPasswordInput) 
 	}
 
 	hashedToken := security.HashToken(resetToken)
-	if PasswordResetToken := domain.NewPasswordResetToken(user.ID, hashedToken, s.resetPasswordTTL); PasswordResetToken != nil {
-		s.passwordResetRepo.CreatePasswordResetToken(ctx, PasswordResetToken)
+	if passwordResetToken := domain.NewPasswordResetToken(user.ID, hashedToken, s.resetPasswordTTL); passwordResetToken != nil {
+		if err := s.passwordResetRepo.CreatePasswordResetToken(ctx, passwordResetToken); err != nil {
+			return "", err
+		}
 	}
 
-	email_link := fmt.Sprintln(`http://localhost:5432/auth/reset-password?token=` + resetToken)
+	email_link := fmt.Sprint(`http://localhost:8080/auth/reset-password?token=` + resetToken)
 
 	return email_link, nil
 }
@@ -284,8 +286,11 @@ type PasswordResetInput struct {
 }
 
 func (s *Service) PasswordReset(ctx context.Context, req *PasswordResetInput) error {
-	hashedToken := security.HashToken(req.ResetToken)
+	if req.Password != req.ConfirmPassword {
+		return platformErrors.ErrComparePassword
+	}
 
+	hashedToken := security.HashToken(req.ResetToken)
 	resetToken, err := s.passwordResetRepo.GetPasswordResetTokenByHash(ctx, hashedToken)
 	if err != nil {
 		return err
