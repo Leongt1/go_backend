@@ -16,11 +16,13 @@ type Config struct {
 }
 
 type DatabaseConfig struct {
-	User     string
-	Password string
-	Host     string
-	Port     string
-	Name     string
+	User           string
+	Password       string
+	Host           string
+	Port           string
+	Name           string
+	SSLmode        string
+	ChannelBinding string
 }
 
 type JWTConfig struct {
@@ -61,11 +63,13 @@ type EmailConfig struct {
 func Load() *Config {
 	cfg := &Config{
 		Database: DatabaseConfig{
-			User:     os.Getenv("DB_USER"),
-			Password: os.Getenv("DB_PASSWORD"),
-			Host:     os.Getenv("DB_HOST"),
-			Port:     os.Getenv("DB_PORT"),
-			Name:     os.Getenv("DB_NAME"),
+			User:           os.Getenv("DB_USER"),
+			Password:       os.Getenv("DB_PASSWORD"),
+			Host:           os.Getenv("DB_HOST"),
+			Port:           os.Getenv("DB_PORT"),
+			Name:           os.Getenv("DB_NAME"),
+			SSLmode:        os.Getenv("PGSSLMODE"),
+			ChannelBinding: os.Getenv("PGCHANNELBINDING"),
 		},
 		JWT: JWTConfig{
 			Secret:     os.Getenv("JWT_SECRET"),
@@ -105,6 +109,18 @@ func Load() *Config {
 func validate(cfg *Config) {
 	if cfg.Database.User == "" || cfg.Database.Host == "" || cfg.Database.Name == "" {
 		log.Fatal("DATABASE_URL is required")
+	}
+
+	if cfg.ServerPort == "" {
+		log.Fatal("PORT is required")
+	}
+
+	if cfg.Database.SSLmode == "" {
+		log.Fatal("SSLmode is required")
+	}
+
+	if cfg.Database.ChannelBinding == "" {
+		log.Fatal("Channel Binding is required")
 	}
 
 	if cfg.JWT.Secret == "" {
