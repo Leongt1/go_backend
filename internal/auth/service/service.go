@@ -20,6 +20,7 @@ import (
 type Service struct {
 	users             *service.Service
 	jwt               *security.JWTManager
+	frontendBaseURL   string
 	refreshRepo       domain.RefreshTokenRepository
 	passwordResetRepo domain.PasswordResetRepository
 
@@ -35,6 +36,7 @@ type Service struct {
 func NewService(
 	users *service.Service,
 	jwt *security.JWTManager,
+	frontendBaseURL string,
 	refreshRepo domain.RefreshTokenRepository,
 	passwordResetRepo domain.PasswordResetRepository,
 	categoryRepo categoryDomain.CategoryRepository,
@@ -46,6 +48,7 @@ func NewService(
 	return &Service{
 		users:             users,
 		jwt:               jwt,
+		frontendBaseURL:   frontendBaseURL,
 		refreshRepo:       refreshRepo,
 		passwordResetRepo: passwordResetRepo,
 		categoryRepo:      categoryRepo,
@@ -269,13 +272,13 @@ func (s *Service) ForgotPassword(ctx context.Context, req *ForgotPasswordInput) 
 	}
 
 	hashedToken := security.HashToken(resetToken)
-	if passwordResetToken := domain.NewPasswordResetToken(user.ID, hashedToken, s.resetPasswordTTL); passwordResetToken != nil {
-		if err := s.passwordResetRepo.CreatePasswordResetToken(ctx, passwordResetToken); err != nil {
-			return err
-		}
+	passwordResetToken := domain.NewPasswordResetToken(user.ID, hashedToken, s.resetPasswordTTL)
+	if err := s.passwordResetRepo.CreatePasswordResetToken(ctx, passwordResetToken); err != nil {
+		return err
 	}
 
-	link := fmt.Sprint(`http://localhost:8080/api/v1/auth/reset-password?token=` + resetToken)
+	// link := fmt.Sprint(`http://localhost:8080/api/v1/auth/reset-password?token=` + resetToken)
+	link := fmt.Sprintf("%s/reset-password?token=%s", s.frontendBaseURL, resetToken)
 
 	return s.emailProvider.Send(ctx, email.SendEmailInput{
 		To:      user.Email,
@@ -294,10 +297,6 @@ func (s *Service) PasswordReset(ctx context.Context, req *PasswordResetInput) er
 	resetToken, err := s.passwordResetRepo.GetPasswordResetTokenByHash(ctx, hashedToken)
 	if err != nil {
 		return err
-	}
-
-	if resetToken == nil {
-		return domain.ErrInvalidPasswordResetToken
 	}
 
 	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

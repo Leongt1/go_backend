@@ -56,7 +56,13 @@ func ErrorHandler() gin.HandlerFunc {
 			case platformErrors.CodeDuplicateCategoryName:
 				c.JSON(http.StatusConflict, errorResponse(domainErr.Message))
 			case platformErrors.CodeTransactionNotFound:
-    			c.JSON(http.StatusNotFound, errorResponse(domainErr.Message))
+				c.JSON(http.StatusNotFound, errorResponse(domainErr.Message))
+			case platformErrors.CodeFailedToResetPassword:
+				c.JSON(http.StatusInternalServerError, errorResponse(domainErr.Message))
+			case platformErrors.CodeBudgetNotFound:
+				c.JSON(http.StatusNotFound, errorResponse(domainErr.Message))
+			case platformErrors.CodeDuplicateBudgetName:
+				c.JSON(http.StatusConflict, errorResponse(domainErr.Message))
 			default:
 				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 			}

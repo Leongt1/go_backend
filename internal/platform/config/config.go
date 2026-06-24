@@ -6,11 +6,12 @@ import (
 )
 
 type Config struct {
-	Database      DatabaseConfig
-	JWT           JWTConfig
-	Admin         AdminConfig
-	ResetPassword ResetPasswordConfig
-	Email         EmailConfig
+	Database        DatabaseConfig
+	JWT             JWTConfig
+	Admin           AdminConfig
+	ResetPassword   ResetPasswordConfig
+	Email           EmailConfig
+	FrontendBaseURL string
 }
 
 type DatabaseConfig struct {
@@ -92,6 +93,7 @@ func Load() *Config {
 				From:           os.Getenv("SMTP_FROM"),
 			},
 		},
+		FrontendBaseURL: os.Getenv("FRONTEND_URL"),
 	}
 
 	validate(cfg)
@@ -129,5 +131,9 @@ func validate(cfg *Config) {
 
 	if cfg.Admin.Name == "" {
 		log.Fatal("ADMIN_NAME is required")
+	}
+
+	if cfg.FrontendBaseURL == "" {
+		log.Fatal("FRONTEND BASE URL is required")
 	}
 }
