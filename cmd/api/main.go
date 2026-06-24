@@ -151,16 +151,20 @@ func main() {
 		}
 	}
 
+	port := cfg.ServerPort
+	if port == "" {
+		port = "8080"
+	}
 	// Initialize server
 	srv := &http.Server{
-		Addr:    cfg.ServerPort,
+		Addr:    ":" + port,
 		Handler: router,
 	}
 
 	// Start server
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			log.Fatalf("%s\n", err)
 		}
 	}()
 
