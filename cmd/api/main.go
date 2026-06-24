@@ -115,7 +115,7 @@ func main() {
 
 	authRepo := authRepo.NewRepository(pool)
 	authService := authService.NewService(
-		userService, jwtManager,
+		userService, jwtManager, cfg.FrontendBaseURL,
 		authRepo, authRepo, categoryRepo,
 		emailProvider,
 		accessTTL, refreshTTL, resetPasswordTTL,

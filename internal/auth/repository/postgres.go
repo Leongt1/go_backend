@@ -190,9 +190,8 @@ func (r *Repository) GetPasswordResetTokenByHash(
 	)
 
 	if err != nil {
-
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrInvalidRefreshToken
+			return nil, domain.ErrInvalidPasswordResetToken
 		}
 
 		return nil, backendErrors.NewAppError(
