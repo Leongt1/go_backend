@@ -12,6 +12,7 @@ type Config struct {
 	ResetPassword   ResetPasswordConfig
 	Email           EmailConfig
 	FrontendBaseURL string
+	ServerPort      string
 }
 
 type DatabaseConfig struct {
@@ -94,6 +95,7 @@ func Load() *Config {
 			},
 		},
 		FrontendBaseURL: os.Getenv("FRONTEND_URL"),
+		ServerPort:      os.Getenv("PORT"),
 	}
 
 	validate(cfg)
