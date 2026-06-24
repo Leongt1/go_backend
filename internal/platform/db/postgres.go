@@ -24,7 +24,7 @@ func NewPostgresPool(ctx context.Context, dbCfg config.DatabaseConfig) (*pgxpool
 
 	dsn := fmt.Sprintf(
 		// "postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		"postgres://%s:%s@%s:%s?sslmode=%s&channel_binding=%s",
+		"postgresql://%s:%s@%s/%s?sslmode=%s&channel_binding=%s",
 		user,
 		password,
 		host,
@@ -36,7 +36,7 @@ func NewPostgresPool(ctx context.Context, dbCfg config.DatabaseConfig) (*pgxpool
 
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parseerr: %w", err)
 	}
 
 	cfg.MaxConns = 10
