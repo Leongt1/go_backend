@@ -13,20 +13,25 @@ func NewPostgresPool(ctx context.Context, dbCfg config.DatabaseConfig) (*pgxpool
 	user := dbCfg.User
 	password := dbCfg.Password
 	host := dbCfg.Host
-	port := dbCfg.Port
 	dbName := dbCfg.Name
+	sslmode := dbCfg.SSLmode
+	channelBinding := dbCfg.ChannelBinding
+	// port := dbCfg.Port
 
 	if user == "" || host == "" || dbName == "" {
 		return nil, fmt.Errorf("missing required database environment variables (DB_USER, DB_HOST, DB_NAME)")
 	}
 
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		// "postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		"postgres://%s:%s@%s:%s?sslmode=%s&channel_binding=%s",
 		user,
 		password,
 		host,
-		port,
+		// port,
 		dbName,
+		sslmode,
+		channelBinding,
 	)
 
 	cfg, err := pgxpool.ParseConfig(dsn)
