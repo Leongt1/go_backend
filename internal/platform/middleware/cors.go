@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -32,4 +33,8 @@ func CORS() gin.HandlerFunc {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	})
+}
+
+func isProduction() bool {
+	return os.Getenv("ENV") == "production"
 }

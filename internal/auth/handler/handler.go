@@ -4,6 +4,7 @@ import (
 	"backend-go/internal/auth/domain"
 	"backend-go/internal/auth/service"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,24 @@ type AuthHandler struct {
 
 func NewAuthHandler(auth *service.Service, refreshTTL time.Duration) *AuthHandler {
 	return &AuthHandler{service: auth, refreshTTL: refreshTTL}
+}
+
+func (h *AuthHandler) setRefreshCookie(c *gin.Context, token string, maxAge int) {
+	secure := os.Getenv("ENV") == "production"
+	if secure {
+		c.SetSameSite(http.SameSiteNoneMode)
+	} else {
+		c.SetSameSite(http.SameSiteLaxMode)
+	}
+	c.SetCookie(
+		"refresh_token",
+		token,
+		maxAge,
+		"/",
+		"",
+		secure,
+		true,
+	)
 }
 
 type LoginRequest struct {
@@ -39,15 +58,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie(
-		"refresh_token",
-		resp.RefreshToken,
-		int(h.refreshTTL.Seconds()),
-		"/",
-		"",
-		false, // false for dev/testing
-		true,  // HttpOnly
-	)
+	h.setRefreshCookie(c, resp.RefreshToken, int(h.refreshTTL.Seconds()))
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": resp.AccessToken,
@@ -68,15 +79,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie(
-		"refresh_token",
-		resp.RefreshToken,
-		int(h.refreshTTL.Seconds()),
-		"/",
-		"",
-		false, // false for dev/testing
-		true,  // HttpOnly
-	)
+	h.setRefreshCookie(c, resp.RefreshToken, int(h.refreshTTL.Seconds()))
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": resp.AccessToken,
@@ -99,15 +102,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	// }
 
 	// clear the refresh token cookie
-	c.SetCookie(
-		"refresh_token",
-		"",
-		-1,
-		"/",
-		"",
-		false, // false for dev/testing
-		true,  // HttpOnly
-	)
+	h.setRefreshCookie(c, "", -1)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",
