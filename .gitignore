@@ -1,5 +1,4 @@
 .env
 .env.prod
-/migrations
 tmp
 api.exe
