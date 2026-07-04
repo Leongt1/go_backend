@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	platformErrors "backend-go/internal/platform/errors"
 	"backend-go/internal/users/domain"
 	"net/http"
 
@@ -12,7 +11,7 @@ func RequireRole(roles ...domain.RoleType) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get(ContextRole)
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": platformErrors.CodeForbidden})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
 			return
 		}
 

@@ -28,23 +28,39 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
+// caller extracts the authenticated user's ID and role from the request context.
+func caller(c *gin.Context) (uuid.UUID, string, error) {
+	idStr, exists := c.Get(middleware.ContextUserID)
+	if !exists {
+		return uuid.Nil, "", domain.ErrInvalidInput
+	}
+	id, err := uuid.Parse(idStr.(string))
+	if err != nil {
+		return uuid.Nil, "", domain.ErrInvalidInput
+	}
+	role, _ := c.Get(middleware.ContextRole)
+	roleStr, _ := role.(string)
+	return id, roleStr, nil
+}
+
 func (h *UserHandler) GetByID(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.Error(domain.ErrInvalidInput)
 		return
 	}
-	user, err := h.service.GetByID(c.Request.Context(), id)
+
+	callerID, callerRole, err := caller(c)
 	if err != nil {
 		c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, user)
-}
+	if callerRole != string(domain.RoleAdmin) && callerID != id {
+		c.Error(domain.ErrForbidden)
+		return
+	}
 
-func (h *UserHandler) GetUserByEmail(c *gin.Context) {
-	email := c.Param("email")
-	user, err := h.service.GetByEmail(c.Request.Context(), email)
+	user, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		c.Error(err)
 		return
@@ -72,15 +88,19 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	updatedByStr, exists := c.Get(middleware.ContextUserID)
-	if !exists {
-		c.Error(domain.ErrInvalidInput)
+	updatedBy, callerRole, err := caller(c)
+	if err != nil {
+		c.Error(err)
 		return
 	}
-	updatedBy, err := uuid.Parse(updatedByStr.(string))
-	if err != nil {
-		c.Error(domain.ErrInvalidInput)
-		return
+
+	// Non-admins may only update themselves and can never change roles
+	if callerRole != string(domain.RoleAdmin) {
+		if updatedBy != id {
+			c.Error(domain.ErrForbidden)
+			return
+		}
+		req.Role = nil
 	}
 
 	// Updating user using domain method

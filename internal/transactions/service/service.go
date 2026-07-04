@@ -10,8 +10,8 @@ import (
 )
 
 type Service struct {
-	repo             domain.TransactionRepository
-	categoryRepo     categoryDomain.CategoryRepository
+	repo         domain.TransactionRepository
+	categoryRepo categoryDomain.CategoryRepository
 }
 
 func NewService(
@@ -19,8 +19,8 @@ func NewService(
 	categoryRepo categoryDomain.CategoryRepository,
 ) *Service {
 	return &Service{
-		repo:             repo,
-		categoryRepo:     categoryRepo,
+		repo:         repo,
+		categoryRepo: categoryRepo,
 	}
 }
 

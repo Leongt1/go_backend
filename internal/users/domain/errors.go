@@ -10,4 +10,5 @@ var (
 	ErrInvalidGender      = platformErrors.NewDomainError(platformErrors.CodeInvalidGender, "Invalid gender")
 	ErrUserNotFound       = platformErrors.NewDomainError(platformErrors.CodeUserNotFound, "User not found")
 	ErrEmailAlreadyExists = platformErrors.NewDomainError(platformErrors.CodeEmailAlreadyExists, "email already exists")
+	ErrForbidden          = platformErrors.NewDomainError(platformErrors.CodeForbidden, "You do not have permission to access this resource")
 )

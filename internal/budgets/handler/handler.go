@@ -4,7 +4,7 @@ import (
 	"backend-go/internal/budgets/domain"
 	"backend-go/internal/budgets/service"
 	"backend-go/internal/platform/middleware"
-	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -167,7 +167,6 @@ func (h *BudgetHandler) Update(c *gin.Context) {
 
 	var req UpdateBudgetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("Error parsing budget ID:", err)
 		c.Error(domain.ErrInvalidInput)
 		return
 	}
@@ -390,7 +389,6 @@ func budgetToResponse(b domain.Budget) BudgetResponse {
 }
 
 func budgetStatusToResponse(status *service.BudgetStatus) BudgetStatusResponse {
-	log.Println("INSIDE RESPONSE CONVERSION")
 	return BudgetStatusResponse{
 		BudgetID:        status.BudgetID.String(),
 		Name:            status.Name,
@@ -406,5 +404,5 @@ func budgetStatusToResponse(status *service.BudgetStatus) BudgetStatusResponse {
 
 // converts rupees from frontend to backend paisa
 func rupeesToPaisa(amount float64) int64 {
-	return int64(amount * 100)
+	return int64(math.Round(amount * 100))
 }

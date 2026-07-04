@@ -111,10 +111,9 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 type SignupRequest struct {
 	Name            string     `json:"name" binding:"required"`
-	Email           string     `json:"email" binding:"required"`
+	Email           string     `json:"email" binding:"required,email"`
 	Password        string     `json:"password" binding:"required"`
 	ConfirmPassword string     `json:"confirm_password" binding:"required"`
-	Role            string     `json:"role" binding:"required"`
 	Gender          string     `json:"gender" binding:"required"`
 	DateOfBirth     *time.Time `json:"date_of_birth"`
 }
@@ -135,7 +134,6 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		Name:        req.Name,
 		Email:       req.Email,
 		Password:    req.Password,
-		Role:        req.Role,
 		Gender:      req.Gender,
 		DateOfBirth: req.DateOfBirth,
 	})
@@ -150,7 +148,7 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 }
 
 type ForgotPasswordRequest struct {
-	Email string `json:"email" binding:"required"`
+	Email string `json:"email" binding:"required,email"`
 }
 
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
@@ -200,7 +198,11 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		ResetToken: rawToken,
 		Password:   req.Password,
 	}); err != nil {
-		c.Error(domain.ErrInvalidPasswordResetToken)
+		if err == domain.ErrWeakPassword {
+			c.Error(err)
+		} else {
+			c.Error(domain.ErrInvalidPasswordResetToken)
+		}
 		return
 	}
 

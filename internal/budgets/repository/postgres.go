@@ -38,7 +38,7 @@ func (r *Repository) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain
 	}
 	defer rows.Close()
 
-	var budgets []domain.Budget
+	budgets := []domain.Budget{}
 	for rows.Next() {
 		var budget domain.Budget
 		if err := rows.Scan(
@@ -315,9 +315,4 @@ func (r *Repository) ClearCategoriesFromBudget(ctx context.Context, budgetID uui
 		return platformErrors.NewAppError(platformErrors.CodeDatabaseError, "Failed to clear budget categories", err)
 	}
 	return nil
-}
-
-// Helper function to create pointers
-func ptrOf[T any](v T) *T {
-	return &v
 }

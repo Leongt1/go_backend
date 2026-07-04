@@ -198,9 +198,16 @@ type SignupInput struct {
 	Name        string
 	Email       string
 	Password    string
-	Role        string
 	Gender      string
 	DateOfBirth *time.Time
+}
+
+// validatePassword enforces the minimum password policy shared by signup and reset.
+func validatePassword(password string) error {
+	if len(password) < 8 {
+		return domain.ErrWeakPassword
+	}
+	return nil
 }
 
 func (s *Service) Signup(ctx context.Context, req *SignupInput) error {
@@ -212,8 +219,7 @@ func (s *Service) Signup(ctx context.Context, req *SignupInput) error {
 		return domain.ErrInvalidInput
 	}
 
-	role, err := userDomain.ParseRole(req.Role)
-	if err != nil {
+	if err := validatePassword(password); err != nil {
 		return err
 	}
 
@@ -226,7 +232,7 @@ func (s *Service) Signup(ctx context.Context, req *SignupInput) error {
 		Name:        name,
 		Email:       email,
 		Password:    password,
-		Role:        role,
+		Role:        userDomain.RoleUser, // public signup can never grant elevated roles
 		Gender:      gender,
 		DateOfBirth: req.DateOfBirth,
 	}
@@ -293,6 +299,10 @@ type PasswordResetInput struct {
 }
 
 func (s *Service) PasswordReset(ctx context.Context, req *PasswordResetInput) error {
+	if err := validatePassword(req.Password); err != nil {
+		return err
+	}
+
 	hashedToken := security.HashToken(req.ResetToken)
 	resetToken, err := s.passwordResetRepo.GetPasswordResetTokenByHash(ctx, hashedToken)
 	if err != nil {

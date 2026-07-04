@@ -4,6 +4,7 @@ import (
 	"backend-go/internal/platform/middleware"
 	"backend-go/internal/transactions/domain"
 	"backend-go/internal/transactions/service"
+	"math"
 	"net/http"
 	"time"
 
@@ -21,7 +22,7 @@ func NewTransactionHandler(service *service.Service) *TransactionHandler {
 
 // converts frontend rupees to backend paisa
 func amountToInt64(amount float64) int64 {
-	return int64(amount * 100)
+	return int64(math.Round(amount * 100))
 }
 
 // converts paisa from storage to frontend rupees

@@ -11,16 +11,16 @@ import (
 )
 
 type Service struct {
-	db	*pgxpool.Pool
-	categoryRepo     domain.CategoryRepository
-	transactionRepo	transactionDomain.TransactionRepository
+	db              *pgxpool.Pool
+	categoryRepo    domain.CategoryRepository
+	transactionRepo transactionDomain.TransactionRepository
 }
 
 func NewService(db *pgxpool.Pool, categoryRepo domain.CategoryRepository, transactionRepo transactionDomain.TransactionRepository) *Service {
 	return &Service{
-		db: db,
-		categoryRepo:     categoryRepo,
-		transactionRepo:  transactionRepo,
+		db:              db,
+		categoryRepo:    categoryRepo,
+		transactionRepo: transactionRepo,
 	}
 }
 
