@@ -108,7 +108,7 @@ func Load() *Config {
 
 func validate(cfg *Config) {
 	if cfg.Database.User == "" || cfg.Database.Host == "" || cfg.Database.Name == "" {
-		log.Fatal("DATABASE_URL is required")
+		log.Fatal("DB_USER, DB_HOST and DB_NAME are required")
 	}
 
 	if cfg.ServerPort == "" {

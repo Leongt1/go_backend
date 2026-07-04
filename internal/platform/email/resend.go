@@ -29,7 +29,6 @@ func (r *ResendProvider) Send(ctx context.Context, input SendEmailInput) error {
 		Subject: input.Subject,
 		Html:    input.HTML,
 	}
-	fmt.Println("params: ", params)
 
 	sent, err := client.Emails.Send(params)
 	if err != nil {

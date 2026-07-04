@@ -109,7 +109,7 @@ func (r *Repository) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain
 	}
 	defer rows.Close()
 
-	var results []domain.Category
+	results := []domain.Category{}
 	for rows.Next() {
 		var uc domain.Category
 		if err := rows.Scan(
@@ -124,6 +124,10 @@ func (r *Repository) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain
 			return nil, platformErrors.NewAppError(platformErrors.CodeDatabaseError, "Failed to scan user categories", err)
 		}
 		results = append(results, uc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, platformErrors.NewAppError(platformErrors.CodeDatabaseError, "Failed to iterate user categories", err)
 	}
 
 	return results, nil

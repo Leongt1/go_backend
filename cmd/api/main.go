@@ -80,7 +80,7 @@ func main() {
 	}
 	resetPasswordTTL, err := time.ParseDuration(cfg.ResetPassword.ResetPasswordTTL)
 	if err != nil {
-		log.Fatal("Invalid RESET_PASSWORD_TOKEN:", err)
+		log.Fatal("Invalid RESET_PASSWORD_TTL:", err)
 	}
 
 	jwtManager := security.NewJWTManager(cfg.JWT.Secret, "finai-api")

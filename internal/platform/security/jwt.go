@@ -69,7 +69,7 @@ func (jm *JWTManager) VerifyToken(tokenString string) (*UserClaims, error) {
 
 	claims, ok := token.Claims.(*UserClaims)
 	if !ok || !token.Valid {
-		return nil, err
+		return nil, fmt.Errorf("invalid token")
 	}
 
 	return claims, nil

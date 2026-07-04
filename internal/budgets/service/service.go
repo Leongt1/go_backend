@@ -159,6 +159,10 @@ func (s *Service) AddCategoryToBudget(ctx context.Context, budgetID, categoryID,
 		return err
 	}
 
+	if category.UserID != userID {
+		return categoryDomain.ErrCategoryNotFound
+	}
+
 	// Check if category is hidden
 	if category.Hidden {
 		return platformErrors.NewDomainError(platformErrors.CodeCategoryHidden, "Cannot add a hidden category to a budget")
@@ -208,6 +212,9 @@ func (s *Service) GetBudgetStatus(ctx context.Context, budgetID uuid.UUID, userI
 	start, end := domain.CurrentPeriod(budget.StartDate, budget.PeriodUnit, budget.PeriodValue)
 
 	spent, err := s.budgetRepo.GetSpentAmount(ctx, budget, start, end)
+	if err != nil {
+		return nil, err
+	}
 
 	// Calculate remaining
 	remaining := budget.Amount - spent
@@ -219,12 +226,19 @@ func (s *Service) GetBudgetStatus(ctx context.Context, budgetID uuid.UUID, userI
 		progressPercent = math.Round(progressPercent*100) / 100 // round to 2 decimal places
 	}
 
-	// Determine status
+	// Determine status. For expense budgets crossing the amount is bad;
+	// for savings budgets reaching the amount means the goal is achieved.
 	status := BudgetStatusHealthy
-	if progressPercent >= 100 {
-		status = BudgetStatusExceeded
-	} else if progressPercent >= 75 {
-		status = BudgetStatusWarning
+	if budget.Kind == domain.BudgetKindSavings {
+		if progressPercent >= 100 {
+			status = BudgetStatusAchieved
+		}
+	} else {
+		if progressPercent >= 100 {
+			status = BudgetStatusExceeded
+		} else if progressPercent >= 75 {
+			status = BudgetStatusWarning
+		}
 	}
 
 	return &BudgetStatus{
@@ -264,16 +278,6 @@ func validateBudgetTypeAndKind(bType domain.BudgetType, kind domain.BudgetKind) 
 	return nil
 }
 
-func getPeriodStart(budget *domain.Budget) time.Time {
-	start, _ := domain.CurrentPeriod(budget.StartDate, budget.PeriodUnit, budget.PeriodValue)
-	return start
-}
-
-func getPeriodEnd(budget *domain.Budget) time.Time {
-	_, end := domain.CurrentPeriod(budget.StartDate, budget.PeriodUnit, budget.PeriodValue)
-	return end
-}
-
 // BudgetStatus represents the current status of a budget
 type BudgetStatus struct {
 	BudgetID        uuid.UUID
@@ -293,4 +297,5 @@ const (
 	BudgetStatusHealthy  BudgetHealthStatus = "healthy"
 	BudgetStatusWarning  BudgetHealthStatus = "warning"
 	BudgetStatusExceeded BudgetHealthStatus = "exceeded"
+	BudgetStatusAchieved BudgetHealthStatus = "achieved"
 )

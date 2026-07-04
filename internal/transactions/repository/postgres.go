@@ -184,7 +184,7 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.T
 	}
 	defer rows.Close()
 
-	var transactions []domain.Transaction
+	transactions := []domain.Transaction{}
 	for rows.Next() {
 		var tx domain.Transaction
 		if err := rows.Scan(
@@ -207,6 +207,14 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.T
 			)
 		}
 		transactions = append(transactions, tx)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, platformErrors.NewAppError(
+			platformErrors.CodeDatabaseError,
+			"failed to iterate transactions",
+			err,
+		)
 	}
 
 	return transactions, nil

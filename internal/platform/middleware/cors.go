@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -11,7 +10,7 @@ import (
 func CORS() gin.HandlerFunc {
 	return cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:5173",           // Next.js dev server
+			"http://localhost:5173",           // Vite dev server
 			"https://fin-ai-wheat.vercel.app", // Production frontend
 		},
 		AllowMethods: []string{
@@ -33,8 +32,4 @@ func CORS() gin.HandlerFunc {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	})
-}
-
-func isProduction() bool {
-	return os.Getenv("ENV") == "production"
 }

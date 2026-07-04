@@ -10,4 +10,5 @@ var (
 	ErrInvalidRefreshToken       = platformErrors.NewDomainError(platformErrors.CodeInvalidCredentials, "Invalid refresh token")
 	ErrInvalidPasswordResetToken = platformErrors.NewDomainError(platformErrors.CodeInvalidCredentials, "Invalid password reset token")
 	ErrPasswordResetFailed       = platformErrors.NewDomainError(platformErrors.CodeFailedToResetPassword, "Failed to reset password")
+	ErrWeakPassword              = platformErrors.NewDomainError(platformErrors.CodeInvalidInput, "Password must be at least 8 characters")
 )
