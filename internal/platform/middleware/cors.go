@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -12,6 +13,13 @@ func CORS() gin.HandlerFunc {
 		AllowOrigins: []string{
 			"http://localhost:5173",           // Vite dev server
 			"https://fin-ai-wheat.vercel.app", // Production frontend
+		},
+		// Vercel preview deployments (per-branch/per-commit URLs like
+		// https://fin-ai-git-<branch>-leongt1s-projects.vercel.app).
+		// Checked only when the origin is not in AllowOrigins.
+		AllowOriginFunc: func(origin string) bool {
+			return strings.HasPrefix(origin, "https://fin-ai-") &&
+				strings.HasSuffix(origin, "-leongt1s-projects.vercel.app")
 		},
 		AllowMethods: []string{
 			"GET",
