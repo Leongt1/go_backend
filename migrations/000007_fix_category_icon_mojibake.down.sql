@@ -1,0 +1,2 @@
+-- Data repair migration: the previous values were corrupted ('????'),
+-- so there is nothing meaningful to restore. Intentionally a no-op.
