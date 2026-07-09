@@ -28,7 +28,25 @@ func NewService(budgetRepo domain.BudgetRepository, categoryRepo categoryDomain.
 
 // ListByUser retrieves all budgets for a user
 func (s *Service) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.Budget, error) {
-	return s.budgetRepo.ListByUser(ctx, userID)
+	budgets, err := s.budgetRepo.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Populate categories, same as GetByID — clients need category_ids
+	// on list items (e.g. the edit modal preselects attached categories)
+	for i := range budgets {
+		if budgets[i].Type != domain.BudgetTypeCategory {
+			continue
+		}
+		categoryIDs, err := s.budgetRepo.GetCategoriesForBudget(ctx, budgets[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		budgets[i].CategoryIDs = categoryIDs
+	}
+
+	return budgets, nil
 }
 
 // GetByID retrieves a specific budget and populates its categories
