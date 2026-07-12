@@ -11,8 +11,17 @@ type Config struct {
 	Admin           AdminConfig
 	ResetPassword   ResetPasswordConfig
 	Email           EmailConfig
+	AI              AIConfig
 	FrontendBaseURL string
 	ServerPort      string
+}
+
+// AIConfig is optional: with no API key the AI endpoints answer 503 and the
+// rest of the app is unaffected.
+type AIConfig struct {
+	APIKey  string
+	Model   string
+	BaseURL string
 }
 
 type DatabaseConfig struct {
@@ -98,12 +107,24 @@ func Load() *Config {
 				From:           os.Getenv("SMTP_FROM"),
 			},
 		},
+		AI: AIConfig{
+			APIKey:  os.Getenv("OPENAI_API_KEY"),
+			Model:   getenvDefault("OPENAI_MODEL", "gpt-4o-mini"),
+			BaseURL: getenvDefault("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+		},
 		FrontendBaseURL: os.Getenv("FRONTEND_URL"),
 		ServerPort:      os.Getenv("PORT"),
 	}
 
 	validate(cfg)
 	return cfg
+}
+
+func getenvDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }
 
 func validate(cfg *Config) {
