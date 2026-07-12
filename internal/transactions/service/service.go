@@ -83,13 +83,25 @@ type ListInput struct {
 	Type       *string
 	DateFrom   *time.Time
 	DateTo     *time.Time
+	// Limit nil = unpaginated (legacy full list); Total is only computed when paginating
+	Limit  *int
+	Offset int
 }
 
-func (s *Service) ListTransactions(ctx context.Context, req *ListInput) ([]domain.Transaction, error) {
+type ListOutput struct {
+	Transactions []domain.Transaction
+	// Total is the count of rows matching the filter ignoring limit/offset.
+	// Only populated when Limit was set; -1 otherwise.
+	Total int64
+}
+
+func (s *Service) ListTransactions(ctx context.Context, req *ListInput) (*ListOutput, error) {
 	filter := domain.TransactionFilter{
 		CategoryID: req.CategoryID,
 		DateFrom:   req.DateFrom,
 		DateTo:     req.DateTo,
+		Limit:      req.Limit,
+		Offset:     req.Offset,
 	}
 
 	// parse type filter if provided
@@ -101,7 +113,20 @@ func (s *Service) ListTransactions(ctx context.Context, req *ListInput) ([]domai
 		filter.Type = &txType
 	}
 
-	return s.repo.List(ctx, req.UserID, filter)
+	transactions, err := s.repo.List(ctx, req.UserID, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &ListOutput{Transactions: transactions, Total: -1}
+	if req.Limit != nil {
+		total, err := s.repo.Count(ctx, req.UserID, filter)
+		if err != nil {
+			return nil, err
+		}
+		out.Total = total
+	}
+	return out, nil
 }
 
 type UpdateInput struct {

@@ -6,6 +6,7 @@ import (
 	"backend-go/internal/transactions/service"
 	"math"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -135,19 +136,58 @@ func (h *TransactionHandler) List(c *gin.Context) {
 		input.DateTo = &parsed
 	}
 
-	transactions, err := h.service.ListTransactions(c.Request.Context(), input)
+	if l := c.Query("limit"); l != "" {
+		limit, err := strconv.Atoi(l)
+		if err != nil || limit < 1 || limit > maxPageSize {
+			c.Error(domain.ErrInvalidInput)
+			return
+		}
+		input.Limit = &limit
+	}
+
+	if o := c.Query("offset"); o != "" {
+		offset, err := strconv.Atoi(o)
+		if err != nil || offset < 0 {
+			c.Error(domain.ErrInvalidInput)
+			return
+		}
+		input.Offset = offset
+	}
+
+	result, err := h.service.ListTransactions(c.Request.Context(), input)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
 	// convert each transaction amount before returning
-	response := make([]TransactionResponse, len(transactions))
-	for i, tx := range transactions {
+	response := make([]TransactionResponse, len(result.Transactions))
+	for i, tx := range result.Transactions {
 		response[i] = toResponse(&tx)
 	}
 
-	c.JSON(http.StatusOK, response)
+	// no limit param = legacy bare-array response; with limit = paginated envelope
+	if input.Limit == nil {
+		c.JSON(http.StatusOK, response)
+		return
+	}
+
+	c.JSON(http.StatusOK, ListTransactionsResponse{
+		Transactions: response,
+		Total:        result.Total,
+		Limit:        *input.Limit,
+		Offset:       input.Offset,
+	})
+}
+
+// maxPageSize caps the page size a client may request.
+const maxPageSize = 100
+
+type ListTransactionsResponse struct {
+	Transactions []TransactionResponse `json:"transactions"`
+	Total        int64                 `json:"total"`
+	Limit        int                   `json:"limit"`
+	Offset       int                   `json:"offset"`
 }
 
 type UpdateRequest struct {
