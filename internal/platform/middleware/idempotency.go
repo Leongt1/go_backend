@@ -98,8 +98,10 @@ func Idempotency(ttl time.Duration) gin.HandlerFunc {
 		e.contentType = w.Header().Get("Content-Type")
 		e.body = w.buf.Bytes()
 
-		// don't pin server errors: let a genuine retry actually retry
-		if e.status >= http.StatusInternalServerError {
+		// only pin successful outcomes. Errors must stay retryable: e.g. a 401
+		// from an expired access token is retried by the frontend with the same
+		// key after a silent refresh, and must reach the handler again.
+		if e.status < http.StatusOK || e.status >= http.StatusMultipleChoices {
 			mu.Lock()
 			delete(entries, fullKey)
 			mu.Unlock()
