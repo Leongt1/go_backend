@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -95,7 +96,13 @@ func (s *Service) Login(ctx context.Context, req *LoginInput) (*LoginOutput, err
 		return nil, err
 	}
 
-	// generate refresh token string (long-lived)
+	// prune this user's expired tokens while we're here
+	if err := s.refreshRepo.DeleteExpiredByUser(ctx, user.ID); err != nil {
+		return nil, err
+	}
+
+	// generate refresh token string (long-lived); only its hash is stored.
+	// each login starts a new rotation family.
 	refreshTokenStr, err := security.GenerateSecureToken()
 	if err != nil {
 		return nil, err
@@ -103,13 +110,19 @@ func (s *Service) Login(ctx context.Context, req *LoginInput) (*LoginOutput, err
 
 	refreshToken := domain.NewRefreshToken(
 		user.ID,
-		refreshTokenStr,
+		security.HashToken(refreshTokenStr),
+		uuid.New(),
 		s.refreshTTL,
 	)
 
 	// Storing in DB
 	err = s.refreshRepo.Create(ctx, refreshToken)
 	if err != nil {
+		return nil, err
+	}
+
+	// cap concurrent sessions per user (oldest beyond the cap get revoked)
+	if err := s.refreshRepo.RevokeActiveBeyondCap(ctx, user.ID, maxActiveRefreshTokens); err != nil {
 		return nil, err
 	}
 
@@ -121,19 +134,28 @@ func (s *Service) Login(ctx context.Context, req *LoginInput) (*LoginOutput, err
 
 }
 
+// maxActiveRefreshTokens caps concurrent sessions (rotation families) per user.
+const maxActiveRefreshTokens = 5
+
 func (s *Service) Refresh(ctx context.Context, refreshTokenStr string) (*LoginOutput, error) {
-	// fetch from DB
-	token, err := s.refreshRepo.GetByToken(ctx, refreshTokenStr)
+	// fetch from DB (only hashes are stored)
+	token, err := s.refreshRepo.GetByTokenHash(ctx, security.HashToken(refreshTokenStr))
 	if err != nil {
 		return nil, err
 	}
 
-	// validate
-	if token.IsExpired() {
-		_ = s.refreshRepo.Revoke(ctx, token.ID) // revoke the invalid/expired token
+	// reuse detection: a revoked token being replayed means the rotation chain
+	// leaked - kill the whole family so a stolen descendant dies too
+	if token.Revoked {
+		if err := s.refreshRepo.RevokeFamily(ctx, token.FamilyID); err != nil {
+			return nil, err
+		}
 		return nil, domain.ErrInvalidRefreshToken
 	}
-	if token.Revoked {
+	if token.IsExpired() {
+		if err := s.refreshRepo.Revoke(ctx, token.ID); err != nil {
+			return nil, err
+		}
 		return nil, domain.ErrInvalidRefreshToken
 	}
 
@@ -157,10 +179,11 @@ func (s *Service) Refresh(ctx context.Context, refreshTokenStr string) (*LoginOu
 		return nil, err
 	}
 
-	// create new refresh token
+	// create new refresh token in the same rotation family
 	newRefresh := domain.NewRefreshToken(
 		user.ID,
-		newRefreshStr,
+		security.HashToken(newRefreshStr),
+		token.FamilyID,
 		s.refreshTTL,
 	)
 
@@ -182,7 +205,7 @@ func (s *Service) Refresh(ctx context.Context, refreshTokenStr string) (*LoginOu
 }
 
 func (s *Service) Logout(ctx context.Context, refreshTokenStr string) error {
-	token, err := s.refreshRepo.GetByToken(ctx, refreshTokenStr)
+	token, err := s.refreshRepo.GetByTokenHash(ctx, security.HashToken(refreshTokenStr))
 	if err != nil {
 		return err
 	}
@@ -191,7 +214,8 @@ func (s *Service) Logout(ctx context.Context, refreshTokenStr string) error {
 		return domain.ErrInvalidRefreshToken
 	}
 
-	return s.refreshRepo.Revoke(ctx, token.ID)
+	// end the whole session chain, not just the current link
+	return s.refreshRepo.RevokeFamily(ctx, token.FamilyID)
 }
 
 type SignupInput struct {
