@@ -18,8 +18,8 @@ func NewPostgresPool(ctx context.Context, dbCfg config.DatabaseConfig) (*pgxpool
 	sslmode := dbCfg.SSLmode
 	channelBinding := dbCfg.ChannelBinding
 
-	if user == "" || host == "" || port == "" || dbName == "" {
-		return nil, fmt.Errorf("missing required database environment variables (DB_USER, DB_HOST, DB_PORT, DB_NAME)")
+	if user == "" || host == "" || dbName == "" {
+		return nil, fmt.Errorf("missing required database environment variables (DB_USER, DB_HOST, DB_NAME)")
 	}
 	if port == "" {
 		port = "5432" // DB_PORT is optional; historic deploys never set it
