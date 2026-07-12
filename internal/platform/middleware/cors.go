@@ -34,6 +34,7 @@ func CORS() gin.HandlerFunc {
 			"Origin",
 			"Content-Type",
 			"Authorization",
+			"Idempotency-Key",
 		},
 		ExposeHeaders: []string{
 			"Content-Length",
