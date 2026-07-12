@@ -1,6 +1,10 @@
 package main
 
 import (
+	"backend-go/internal/ai"
+	aiHandler "backend-go/internal/ai/handler"
+	aiRepo "backend-go/internal/ai/repository"
+	aiService "backend-go/internal/ai/service"
 	"backend-go/internal/auth"
 	authHandler "backend-go/internal/auth/handler"
 	authRepo "backend-go/internal/auth/repository"
@@ -122,6 +126,13 @@ func main() {
 	)
 	authHandler := authHandler.NewAuthHandler(authService, refreshTTL)
 
+	aiRepo := aiRepo.NewRepository(pool)
+	aiSvc := aiService.NewService(
+		aiRepo, txService, categoryService, categoryRepo, txRepo,
+		aiService.NewOpenAIClient(cfg.AI.APIKey, cfg.AI.Model, cfg.AI.BaseURL),
+	)
+	aiHandler := aiHandler.NewAIHandler(aiSvc)
+
 	api := router.Group("/api/v1")
 	// Initialize routes
 	auth.RegisterRoutes(api, authHandler)
@@ -129,6 +140,7 @@ func main() {
 	categories.RegisterRoutes(api, categoryHandler, jwtManager)
 	transactions.RegisterRoutes(api, txHandler, jwtManager)
 	budgets.RegisterRoutes(api, budgetHandler, jwtManager)
+	ai.RegisterRoutes(api, aiHandler, jwtManager)
 
 	// Seed admin user
 	if err := users.SeedUser(ctx, userRepo, cfg.Admin); err != nil {
