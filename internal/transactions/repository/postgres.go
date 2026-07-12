@@ -132,13 +132,9 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.TransactionFilter) ([]domain.Transaction, error) {
-	base := `
-		SELECT id, user_id, category_id, amount, description, type, date, created_at, updated_at, created_by, updated_by
-		FROM transactions
-		WHERE user_id = $1
-	`
-
+// buildFilterClause turns the dynamic filter into extra WHERE conditions and
+// their args. userID is always $1; shared by List and Count so both stay in sync.
+func buildFilterClause(userID uuid.UUID, filter domain.TransactionFilter) (string, []any) {
 	// args holds the query parameters, userID is always first
 	args := []any{userID}
 
@@ -165,14 +161,32 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.T
 		conditions = append(conditions, fmt.Sprintf("date < $%d", len(args)))
 	}
 
-	// Build the final query
-	query := base
+	clause := ""
 	if len(conditions) > 0 {
-		query += " AND " + strings.Join(conditions, " AND ")
+		clause = " AND " + strings.Join(conditions, " AND ")
 	}
+	return clause, args
+}
 
-	// Add ordering
-	query += " ORDER BY date DESC"
+func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.TransactionFilter) ([]domain.Transaction, error) {
+	base := `
+		SELECT id, user_id, category_id, amount, description, type, date, created_at, updated_at, created_by, updated_by
+		FROM transactions
+		WHERE user_id = $1
+	`
+
+	clause, args := buildFilterClause(userID, filter)
+	query := base + clause
+
+	// created_at breaks ties so pages are stable when many rows share a date
+	query += " ORDER BY date DESC, created_at DESC"
+
+	if filter.Limit != nil {
+		args = append(args, *filter.Limit)
+		query += fmt.Sprintf(" LIMIT $%d", len(args))
+		args = append(args, filter.Offset)
+		query += fmt.Sprintf(" OFFSET $%d", len(args))
+	}
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
@@ -218,6 +232,21 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID, filter domain.T
 	}
 
 	return transactions, nil
+}
+
+func (r *Repository) Count(ctx context.Context, userID uuid.UUID, filter domain.TransactionFilter) (int64, error) {
+	clause, args := buildFilterClause(userID, filter)
+	query := `SELECT COUNT(*) FROM transactions WHERE user_id = $1` + clause
+
+	var total int64
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+		return 0, platformErrors.NewAppError(
+			platformErrors.CodeDatabaseError,
+			"failed to count transactions",
+			err,
+		)
+	}
+	return total, nil
 }
 
 func (r *Repository) ReassignCategoryTx(ctx context.Context, tx pgx.Tx, userID, fromCategoryID, toCategoryID uuid.UUID) error {
