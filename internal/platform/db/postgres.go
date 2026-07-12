@@ -13,26 +13,33 @@ func NewPostgresPool(ctx context.Context, dbCfg config.DatabaseConfig) (*pgxpool
 	user := dbCfg.User
 	password := dbCfg.Password
 	host := dbCfg.Host
+	port := dbCfg.Port
 	dbName := dbCfg.Name
 	sslmode := dbCfg.SSLmode
 	channelBinding := dbCfg.ChannelBinding
-	// port := dbCfg.Port
 
 	if user == "" || host == "" || dbName == "" {
 		return nil, fmt.Errorf("missing required database environment variables (DB_USER, DB_HOST, DB_NAME)")
 	}
+	if port == "" {
+		port = "5432" // DB_PORT is optional; historic deploys never set it
+	}
 
 	dsn := fmt.Sprintf(
-		// "postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		"postgresql://%s:%s@%s/%s?sslmode=%s&channel_binding=%s",
+		"postgresql://%s:%s@%s:%s/%s?sslmode=%s",
 		user,
 		password,
 		host,
-		// port,
+		port,
 		dbName,
 		sslmode,
-		channelBinding,
 	)
+	// pgx forwards channel_binding to the server as a startup parameter, which
+	// vanilla Postgres rejects; Neon's proxy accepts it. Only send it when it
+	// is actually requested (anything other than "disable").
+	if channelBinding != "" && channelBinding != "disable" {
+		dsn += "&channel_binding=" + channelBinding
+	}
 
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
