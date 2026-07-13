@@ -7,21 +7,26 @@ import (
 )
 
 type RefreshToken struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Token     string
+	ID     uuid.UUID
+	UserID uuid.UUID
+	// TokenHash is the SHA-256 hex digest of the token; the plaintext is never stored.
+	TokenHash string
+	// FamilyID groups a login session's rotation chain. A replayed revoked
+	// token revokes the entire family (reuse detection).
+	FamilyID  uuid.UUID
 	ExpiresAt time.Time
 	Revoked   bool
 	CreatedAt time.Time
 }
 
-func NewRefreshToken(userID uuid.UUID, token string, ttl time.Duration) *RefreshToken {
+func NewRefreshToken(userID uuid.UUID, tokenHash string, familyID uuid.UUID, ttl time.Duration) *RefreshToken {
 	now := time.Now().UTC()
 
 	return &RefreshToken{
 		ID:        uuid.New(),
 		UserID:    userID,
-		Token:     token,
+		TokenHash: tokenHash,
+		FamilyID:  familyID,
 		ExpiresAt: now.Add(ttl),
 		Revoked:   false,
 		CreatedAt: now,

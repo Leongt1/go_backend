@@ -8,8 +8,16 @@ import (
 
 type RefreshTokenRepository interface {
 	Create(ctx context.Context, token *RefreshToken) error
-	GetByToken(ctx context.Context, token string) (*RefreshToken, error)
+	GetByTokenHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
 	Revoke(ctx context.Context, id uuid.UUID) error
+	// RevokeFamily revokes every token in a rotation family (reuse detection).
+	RevokeFamily(ctx context.Context, familyID uuid.UUID) error
+	// DeleteExpiredByUser prunes rows past their expiry (revoked rows are kept
+	// until expiry so replays can still be detected).
+	DeleteExpiredByUser(ctx context.Context, userID uuid.UUID) error
+	// RevokeActiveBeyondCap keeps the newest `keep` active tokens for the user
+	// and revokes the rest (session cap).
+	RevokeActiveBeyondCap(ctx context.Context, userID uuid.UUID, keep int) error
 }
 
 type PasswordResetRepository interface {
