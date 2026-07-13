@@ -32,4 +32,8 @@ const (
 	// Budgets
 	CodeBudgetNotFound      = "BUDGET_NOT_FOUND"
 	CodeDuplicateBudgetName = "DUPLICATE_BUDGET_NAME"
+
+	// AI assistant
+	CodeAINoCredits   = "AI_NO_CREDITS"
+	CodeAIUnavailable = "AI_UNAVAILABLE"
 )

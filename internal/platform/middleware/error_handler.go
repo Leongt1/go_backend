@@ -63,6 +63,10 @@ func ErrorHandler() gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, errorResponse(domainErr.Message))
 			case platformErrors.CodeDuplicateBudgetName:
 				c.JSON(http.StatusConflict, errorResponse(domainErr.Message))
+			case platformErrors.CodeAINoCredits:
+				c.JSON(http.StatusPaymentRequired, errorResponse(domainErr.Message))
+			case platformErrors.CodeAIUnavailable:
+				c.JSON(http.StatusServiceUnavailable, errorResponse(domainErr.Message))
 			default:
 				c.JSON(http.StatusInternalServerError, errorResponse("something went wrong"))
 			}
