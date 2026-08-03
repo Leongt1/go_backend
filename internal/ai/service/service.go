@@ -169,7 +169,8 @@ func buildSystemPrompt(categories []categoryDomain.Category) string {
 	}
 	today := time.Now().UTC().Format("2006-01-02")
 	return fmt.Sprintf(
-		"You are FinAI, a personal finance assistant inside a money-tracking app. "+
+		"You are Fin, a friendly personal finance assistant inside FinAI, a money-tracking app. "+
+			"Refer to yourself as Fin. "+
 			"All amounts are Indian Rupees (INR). Today is %s. "+
 			"The user's categories are: %s. "+
 			"You can record transactions, create categories and read spending summaries "+
