@@ -23,6 +23,10 @@ const maxToolRounds = 5
 // maxHistoryTurns caps how much client-supplied history is forwarded.
 const maxHistoryTurns = 20
 
+// CreditsUnlimited is the sentinel balance reported for admins, who bypass
+// credit consumption entirely. The frontend renders it as "Unlimited".
+const CreditsUnlimited = -1
+
 type Service struct {
 	credits         domain.CreditRepository
 	transactions    *transactionService.Service
@@ -59,6 +63,8 @@ type ChatInput struct {
 	UserID  uuid.UUID
 	Message string
 	History []ChatTurn
+	// IsAdmin callers bypass credit consumption entirely (unlimited).
+	IsAdmin bool
 }
 
 type ChatOutput struct {
@@ -80,10 +86,14 @@ func (s *Service) Chat(ctx context.Context, input *ChatInput) (*ChatOutput, erro
 	}
 
 	// one prompt = one credit, spent up front (atomic); refunded if the
-	// provider is unreachable
-	remaining, err := s.credits.ConsumeCredit(ctx, input.UserID)
-	if err != nil {
-		return nil, err
+	// provider is unreachable. Admins are unlimited and never spend.
+	remaining := CreditsUnlimited
+	if !input.IsAdmin {
+		var err error
+		remaining, err = s.credits.ConsumeCredit(ctx, input.UserID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	categories, err := s.categoryRepo.ListByUser(ctx, input.UserID)
@@ -111,8 +121,11 @@ func (s *Service) Chat(ctx context.Context, input *ChatInput) (*ChatOutput, erro
 		msg, err := s.client.chat(ctx, messages, toolDefs())
 		if err != nil {
 			log.Printf("ai: provider call failed: %v", err)
-			if refundErr := s.credits.RefundCredit(ctx, input.UserID); refundErr != nil {
-				log.Printf("ai: credit refund failed: %v", refundErr)
+			// admins never spent a credit, so there is nothing to refund
+			if !input.IsAdmin {
+				if refundErr := s.credits.RefundCredit(ctx, input.UserID); refundErr != nil {
+					log.Printf("ai: credit refund failed: %v", refundErr)
+				}
 			}
 			return nil, domain.ErrAIUnavailable
 		}
