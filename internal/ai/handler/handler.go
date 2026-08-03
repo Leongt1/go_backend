@@ -4,6 +4,7 @@ import (
 	"backend-go/internal/ai/domain"
 	"backend-go/internal/ai/service"
 	"backend-go/internal/platform/middleware"
+	usersDomain "backend-go/internal/users/domain"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -56,6 +57,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		UserID:  userID,
 		Message: req.Message,
 		History: history,
+		IsAdmin: isAdmin(c),
 	})
 	if err != nil {
 		c.Error(err)
@@ -76,6 +78,13 @@ func (h *AIHandler) Credits(c *gin.Context) {
 		return
 	}
 
+	// admins have unlimited credits; report the sentinel so the UI shows
+	// "Unlimited" instead of a number.
+	if isAdmin(c) {
+		c.JSON(http.StatusOK, gin.H{"credits": service.CreditsUnlimited})
+		return
+	}
+
 	credits, err := h.service.GetCredits(c.Request.Context(), userID)
 	if err != nil {
 		c.Error(err)
@@ -91,4 +100,15 @@ func getUserID(c *gin.Context) (uuid.UUID, error) {
 		return uuid.Nil, domain.ErrInvalidInput
 	}
 	return uuid.Parse(userIDStr.(string))
+}
+
+// isAdmin reports whether the authenticated caller has the Admin role, read
+// from the JWT claims the auth middleware placed on the context.
+func isAdmin(c *gin.Context) bool {
+	role, exists := c.Get(middleware.ContextRole)
+	if !exists {
+		return false
+	}
+	roleStr, ok := role.(string)
+	return ok && roleStr == string(usersDomain.RoleAdmin)
 }

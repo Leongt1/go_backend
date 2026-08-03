@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at      TIMESTAMPTZ NOT NULL,
     created_by      UUID,
     updated_by      UUID,
-    ai_credits      INT NOT NULL DEFAULT 2
+    ai_credits      INT NOT NULL DEFAULT 100
 );
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (

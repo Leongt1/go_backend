@@ -109,7 +109,7 @@ func Load() *Config {
 		},
 		AI: AIConfig{
 			APIKey:  os.Getenv("OPENAI_API_KEY"),
-			Model:   getenvDefault("OPENAI_MODEL", "gpt-4o-mini"),
+			Model:   getenvDefault("OPENAI_MODEL", "gpt-4.1-mini"),
 			BaseURL: getenvDefault("OPENAI_BASE_URL", "https://api.openai.com/v1"),
 		},
 		FrontendBaseURL: os.Getenv("FRONTEND_URL"),
