@@ -65,6 +65,9 @@ type chatRequest struct {
 	Model    string        `json:"model"`
 	Messages []chatMessage `json:"messages"`
 	Tools    []toolDef     `json:"tools,omitempty"`
+	// ResponseFormat forces a JSON reply (e.g. {"type":"json_object"}) for the
+	// extraction path, which parses the content as structured data.
+	ResponseFormat map[string]string `json:"response_format,omitempty"`
 }
 
 type chatResponse struct {
@@ -76,12 +79,27 @@ type chatResponse struct {
 	} `json:"error"`
 }
 
+// chat runs one tool-calling completion and returns the assistant message.
 func (c *OpenAIClient) chat(ctx context.Context, messages []chatMessage, tools []toolDef) (*chatMessage, error) {
-	body, err := json.Marshal(chatRequest{
-		Model:    c.model,
-		Messages: messages,
-		Tools:    tools,
+	return c.do(ctx, chatRequest{Model: c.model, Messages: messages, Tools: tools})
+}
+
+// completeJSON runs one completion with no tools, forcing a JSON-object reply,
+// and returns the raw content string for the caller to parse.
+func (c *OpenAIClient) completeJSON(ctx context.Context, messages []chatMessage) (string, error) {
+	msg, err := c.do(ctx, chatRequest{
+		Model:          c.model,
+		Messages:       messages,
+		ResponseFormat: map[string]string{"type": "json_object"},
 	})
+	if err != nil {
+		return "", err
+	}
+	return msg.Content, nil
+}
+
+func (c *OpenAIClient) do(ctx context.Context, reqBody chatRequest) (*chatMessage, error) {
+	body, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, err
 	}

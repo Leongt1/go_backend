@@ -160,6 +160,154 @@ func (s *Service) Chat(ctx context.Context, input *ChatInput) (*ChatOutput, erro
 	}, nil
 }
 
+// maxExtractChars bounds the pasted text so one extraction can't blow up token
+// spend. ~4000 chars comfortably covers a month of SMS/GPay lines.
+const maxExtractChars = 4000
+
+// maxExtractResults caps how many candidate transactions we return from one
+// paste, guarding against a runaway model reply.
+const maxExtractResults = 100
+
+type ExtractInput struct {
+	UserID  uuid.UUID
+	Text    string
+	IsAdmin bool
+}
+
+// ExtractedTransaction is one candidate parsed from pasted text. It is NOT
+// saved - the user reviews and confirms these in the UI before they are created.
+type ExtractedTransaction struct {
+	Amount      float64
+	Kind        string
+	Category    string
+	Date        string
+	Description string
+}
+
+type ExtractOutput struct {
+	Transactions     []ExtractedTransaction
+	CreditsRemaining int
+}
+
+// ExtractTransactions parses a free-form block of text (pasted SMS/GPay lines,
+// or a quick list) into candidate transactions for bulk import. It spends one
+// credit like a chat message, never saves anything, and refunds on provider
+// failure. Category strings are the model's best guess against the user's list;
+// the frontend resolves/lets the user fix them before committing.
+func (s *Service) ExtractTransactions(ctx context.Context, input *ExtractInput) (*ExtractOutput, error) {
+	text := strings.TrimSpace(input.Text)
+	if text == "" {
+		return nil, domain.ErrInvalidInput
+	}
+	if len(text) > maxExtractChars {
+		return nil, domain.ErrInvalidInput
+	}
+	if !s.client.configured() {
+		return nil, domain.ErrAINotConfigured
+	}
+
+	remaining := CreditsUnlimited
+	if !input.IsAdmin {
+		var err error
+		remaining, err = s.credits.ConsumeCredit(ctx, input.UserID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	categories, err := s.categoryRepo.ListByUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	messages := []chatMessage{
+		{Role: "system", Content: buildExtractPrompt(categories)},
+		{Role: "user", Content: text},
+	}
+
+	content, err := s.client.completeJSON(ctx, messages)
+	if err != nil {
+		log.Printf("ai: extract provider call failed: %v", err)
+		if !input.IsAdmin {
+			if refundErr := s.credits.RefundCredit(ctx, input.UserID); refundErr != nil {
+				log.Printf("ai: credit refund failed: %v", refundErr)
+			}
+		}
+		return nil, domain.ErrAIUnavailable
+	}
+
+	var parsed struct {
+		Transactions []struct {
+			Amount      float64 `json:"amount"`
+			Kind        string  `json:"kind"`
+			Category    string  `json:"category"`
+			Date        string  `json:"date"`
+			Description string  `json:"description"`
+		} `json:"transactions"`
+	}
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		log.Printf("ai: extract reply was not valid JSON: %v", err)
+		return nil, domain.ErrAIUnavailable
+	}
+
+	today := time.Now().UTC().Format("2006-01-02")
+	out := make([]ExtractedTransaction, 0, len(parsed.Transactions))
+	for _, t := range parsed.Transactions {
+		if len(out) >= maxExtractResults {
+			break
+		}
+		if t.Amount <= 0 {
+			continue // a candidate with no usable amount is noise
+		}
+
+		kind := transactionDomain.TransactionTypeExpense
+		if strings.EqualFold(t.Kind, "Income") {
+			kind = transactionDomain.TransactionTypeIncome
+		}
+
+		date := today
+		if t.Date != "" {
+			if _, err := time.Parse("2006-01-02", t.Date); err == nil {
+				date = t.Date
+			}
+		}
+
+		out = append(out, ExtractedTransaction{
+			Amount:      t.Amount,
+			Kind:        string(kind),
+			Category:    strings.TrimSpace(t.Category),
+			Date:        date,
+			Description: strings.TrimSpace(t.Description),
+		})
+	}
+
+	return &ExtractOutput{Transactions: out, CreditsRemaining: remaining}, nil
+}
+
+func buildExtractPrompt(categories []categoryDomain.Category) string {
+	names := make([]string, 0, len(categories))
+	for _, c := range categories {
+		if !c.Hidden {
+			names = append(names, c.Name)
+		}
+	}
+	today := time.Now().UTC().Format("2006-01-02")
+	return fmt.Sprintf(
+		"You are Fin, a finance assistant that extracts transactions from pasted text "+
+			"(bank/UPI SMS, GPay/PhonePe lines, or a quick list). All amounts are Indian "+
+			"Rupees (INR). Today is %s. The user's existing categories are: %s. "+
+			"Return ONLY a JSON object of the form "+
+			`{"transactions":[{"amount":number,"kind":"Income"|"Expense","category":string,"date":"YYYY-MM-DD","description":string}]}. `+
+			"Rules: amount is a positive number in rupees; kind is Expense unless the text clearly "+
+			"indicates money received (salary, refund, credited); pick the best-matching existing "+
+			"category name when one fits, otherwise use a short sensible name; date defaults to today "+
+			"if not stated and must never be in the future; description is a short note (merchant or "+
+			"purpose). Skip anything that is not a real transaction (OTPs, balance alerts, promos). "+
+			"If there are no transactions, return {\"transactions\":[]}.",
+		today, strings.Join(names, ", "),
+	)
+}
+
 func buildSystemPrompt(categories []categoryDomain.Category) string {
 	names := make([]string, 0, len(categories))
 	for _, c := range categories {
