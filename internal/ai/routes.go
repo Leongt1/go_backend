@@ -13,6 +13,7 @@ func RegisterRoutes(r *gin.RouterGroup, handler *handler.AIHandler, jwtManager *
 	aiRoutes.Use(middleware.AuthMiddleware(jwtManager))
 	{
 		aiRoutes.POST("/chat", handler.Chat)
+		aiRoutes.POST("/transactions/extract", handler.ExtractTransactions)
 		aiRoutes.GET("/credits", handler.Credits)
 	}
 }
