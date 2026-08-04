@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -63,6 +64,37 @@ func TestRateLimitBy_IndependentPerKey(t *testing.T) {
 	// user-b is untouched by user-a hitting its limit
 	if got := do(r, "user-b"); got != http.StatusOK {
 		t.Errorf("user-b first request: got %d, want 200", got)
+	}
+}
+
+// A blocked request's Retry-After header reflects the real wait until the next
+// token, not a hardcoded value.
+func TestRateLimitBy_RetryAfterReflectsWait(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	// one token every 2s, burst 1: the second request must wait ~2s
+	r.Use(RateLimitBy(func(*gin.Context) string { return "k" }, rate.Every(2*time.Second), 1))
+	r.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	send := func() (int, string) {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/", nil))
+		return w.Code, w.Header().Get("Retry-After")
+	}
+
+	if code, _ := send(); code != http.StatusOK {
+		t.Fatalf("first request: got %d, want 200", code)
+	}
+	code, retryAfter := send()
+	if code != http.StatusTooManyRequests {
+		t.Fatalf("second request: got %d, want 429", code)
+	}
+	n, err := strconv.Atoi(retryAfter)
+	if err != nil {
+		t.Fatalf("Retry-After %q is not an integer: %v", retryAfter, err)
+	}
+	if n < 1 || n > 2 {
+		t.Errorf("Retry-After = %d, want ~2 (the refill interval)", n)
 	}
 }
 

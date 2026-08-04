@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"math"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -72,8 +74,18 @@ func RateLimitBy(keyFn func(*gin.Context) string, rps rate.Limit, burst int) gin
 		cl.lastSeen = time.Now()
 		mu.Unlock()
 
-		if !cl.lim.Allow() {
-			c.Header("Retry-After", "1")
+		// Reserve a token instead of Allow() so we can report an accurate
+		// Retry-After. Delay() is 0 when a token is free now (the reservation
+		// consumes it, like Allow); when it's not, we reject and Cancel() so the
+		// rejected request doesn't hold the next token.
+		res := cl.lim.Reserve()
+		if delay := res.Delay(); delay > 0 || !res.OK() {
+			res.Cancel()
+			retryAfter := 1
+			if res.OK() { // OK() is false only if burst is 0 (Delay is +Inf)
+				retryAfter = max(1, int(math.Ceil(delay.Seconds())))
+			}
+			c.Header("Retry-After", strconv.Itoa(retryAfter))
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"error": "too many requests, slow down",
 			})
