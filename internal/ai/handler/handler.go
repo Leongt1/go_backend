@@ -71,6 +71,66 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	})
 }
 
+type ExtractRequest struct {
+	Text string `json:"text" binding:"required"`
+}
+
+type ExtractedTransactionResponse struct {
+	Amount      float64 `json:"amount"`
+	Kind        string  `json:"kind"`
+	Category    string  `json:"category"`
+	Date        string  `json:"date"`
+	Description string  `json:"description"`
+}
+
+type ExtractResponse struct {
+	Transactions     []ExtractedTransactionResponse `json:"transactions"`
+	CreditsRemaining int                            `json:"credits_remaining"`
+}
+
+// ExtractTransactions parses pasted text into candidate transactions for bulk
+// import. It spends one credit and returns unsaved candidates for the user to
+// review and confirm on the client.
+func (h *AIHandler) ExtractTransactions(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
+	var req ExtractRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(domain.ErrInvalidInput)
+		return
+	}
+
+	out, err := h.service.ExtractTransactions(c.Request.Context(), &service.ExtractInput{
+		UserID:  userID,
+		Text:    req.Text,
+		IsAdmin: isAdmin(c),
+	})
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	transactions := make([]ExtractedTransactionResponse, len(out.Transactions))
+	for i, t := range out.Transactions {
+		transactions[i] = ExtractedTransactionResponse{
+			Amount:      t.Amount,
+			Kind:        t.Kind,
+			Category:    t.Category,
+			Date:        t.Date,
+			Description: t.Description,
+		}
+	}
+
+	c.JSON(http.StatusOK, ExtractResponse{
+		Transactions:     transactions,
+		CreditsRemaining: out.CreditsRemaining,
+	})
+}
+
 func (h *AIHandler) Credits(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
