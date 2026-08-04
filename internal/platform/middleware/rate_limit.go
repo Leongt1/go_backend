@@ -16,10 +16,33 @@ type clientLimiter struct {
 	lastSeen time.Time
 }
 
+// ipKey buckets requests by client IP - the default for public/global limiting.
+func ipKey(c *gin.Context) string { return c.ClientIP() }
+
+// UserOrIPKey buckets requests by the authenticated user id (set on the context
+// by AuthMiddleware), falling back to client IP when absent. Use this to key a
+// limiter per account rather than per IP - mount it only AFTER AuthMiddleware.
+func UserOrIPKey(c *gin.Context) string {
+	if v, ok := c.Get(ContextUserID); ok {
+		if s, ok := v.(string); ok && s != "" {
+			return "user:" + s
+		}
+	}
+	return "ip:" + c.ClientIP()
+}
+
 // RateLimit returns a per-client token-bucket limiter keyed by client IP.
 // Each call creates an independent limiter set, so a stricter instance can be
 // mounted on sensitive groups (e.g. /auth) on top of a global one.
 func RateLimit(rps rate.Limit, burst int) gin.HandlerFunc {
+	return RateLimitBy(ipKey, rps, burst)
+}
+
+// RateLimitBy is RateLimit with a configurable bucket key, so a limiter can be
+// scoped per user (UserOrIPKey) instead of per IP - useful for authenticated,
+// cost-sensitive endpoints (e.g. AI) where abuse maps to an account. Each call
+// creates an independent limiter set.
+func RateLimitBy(keyFn func(*gin.Context) string, rps rate.Limit, burst int) gin.HandlerFunc {
 	var mu sync.Mutex
 	clients := make(map[string]*clientLimiter)
 
@@ -38,7 +61,7 @@ func RateLimit(rps rate.Limit, burst int) gin.HandlerFunc {
 	}()
 
 	return func(c *gin.Context) {
-		key := c.ClientIP()
+		key := keyFn(c)
 
 		mu.Lock()
 		cl, ok := clients[key]
