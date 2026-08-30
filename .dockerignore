@@ -1,0 +1,12 @@
+# Keep secrets, local junk, and build noise out of the image build context.
+# Anything matched here is invisible to `COPY . .` in the Dockerfile.
+.env
+.env.*
+.git
+.gitignore
+tmp/
+.air.toml
+*_test.go
+Dockerfile
+.dockerignore
+README.md
